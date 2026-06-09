@@ -65,8 +65,10 @@ export default function Dashboard() {
   });
   const [recurForm, setRecurForm] = useState({
     startDate: today(), endDate: addDays(today(), 27),
-    time: '09:00', days: [0,2,3],
-    platforms: ['linkedin','twitter','facebook','instagram'], category: '', articleUrl: '',
+    time: '11:00', days: [0,2,3],
+    platforms: ['linkedin','twitter','facebook','instagram'],
+    categories: Object.keys(CATEGORIES), // all selected by default
+    articleUrl: '',
   });
   // ── Slot list filters ────────────────────────
   const [slotFilterFrom, setSlotFilterFrom] = useState('');
@@ -191,7 +193,8 @@ export default function Dashboard() {
   const removeSlot = (id) => setCustomSlots(p => p.filter(s => s.id !== id));
 
   const addRecurring = () => {
-    const { startDate, endDate, time, days, platforms, category, articleUrl } = recurForm;
+    const { startDate, endDate, time, days, platforms, categories, articleUrl } = recurForm;
+    const category = categories.length === Object.keys(CATEGORIES).length ? '' : categories[0] || '';
     if (!startDate || !endDate || !days.length || !platforms.length) return;
     const cur = new Date(startDate + 'T00:00:00');
     const end = new Date(endDate + 'T00:00:00');
@@ -200,7 +203,7 @@ export default function Dashboard() {
     while (cur <= end && guard++ < 500) {
       const wd = cur.getDay() === 0 ? 6 : cur.getDay() - 1;
       if (days.includes(wd)) {
-        newSlots.push({ id: uid(), date: cur.toISOString().slice(0,10), time, platforms: [...platforms], category, topicOverride: '', articleUrl: articleUrl||'' });
+        newSlots.push({ id: uid(), date: cur.toISOString().slice(0,10), time, platforms: [...platforms], categories: [...categories], category, topicOverride: '', articleUrl: articleUrl||'' });
       }
       cur.setDate(cur.getDate() + 1);
     }
@@ -244,9 +247,11 @@ export default function Dashboard() {
           displayTitle: slot.articleUrl.replace(/^https?:\/\/innago\.com\//, '').replace(/\/$/, '').replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),
         };
       } else {
-        const pool = slot.category && CATEGORIES[slot.category]
-          ? allArticles.filter(a => a.category === slot.category)
-          : allArticles;
+        const pool = slot.categories && slot.categories.length > 0 && slot.categories.length < Object.keys(CATEGORIES).length
+          ? allArticles.filter(a => slot.categories.includes(a.category))
+          : slot.category && CATEGORIES[slot.category]
+            ? allArticles.filter(a => a.category === slot.category)
+            : allArticles;
         const fresh = pool.filter(a => !prevUsed.has(a.url) && !usedThisRun.has(a.url));
         const source = fresh.length > 0 ? fresh : pool.filter(a => !usedThisRun.has(a.url));
         const finalPool = source.length > 0 ? source : pool;
@@ -582,11 +587,33 @@ export default function Dashboard() {
                   <Field label="Time (ET)">
                     <input type="time" value={recurForm.time} onChange={e=>setRecurForm(f=>({...f,time:e.target.value}))} style={input} />
                   </Field>
-                  <Field label="Content category">
-                    <select value={recurForm.category} onChange={e=>setRecurForm(f=>({...f,category:e.target.value,articleUrl:''}))} style={input}>
-                      <option value="">— any —</option>
-                      {Object.keys(CATEGORIES).map(c=><option key={c} value={c}>{c}</option>)}
-                    </select>
+                  <Field label="Content categories">
+                    <div style={{ display:'flex', gap:6, marginBottom:6 }}>
+                      <button onClick={()=>setRecurForm(f=>({...f,categories:Object.keys(CATEGORIES)}))}
+                        style={{ ...outlineBtn, fontSize:11, padding:'3px 10px' }}>Select all</button>
+                      <button onClick={()=>setRecurForm(f=>({...f,categories:[]}))}
+                        style={{ ...outlineBtn, fontSize:11, padding:'3px 10px' }}>Clear all</button>
+                    </div>
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                      {Object.keys(CATEGORIES).map(cat => {
+                        const on = recurForm.categories.includes(cat);
+                        return (
+                          <label key={cat} style={{ display:'flex', alignItems:'center', gap:5, cursor:'pointer',
+                            padding:'4px 10px', borderRadius:20, fontSize:12,
+                            border:`1.5px solid ${on?BLUE:BORDER}`,
+                            background:on?BLUE_BG:'#fff', color:on?BLUE:'#374151', fontWeight:on?600:400 }}>
+                            <input type="checkbox" checked={on}
+                              onChange={()=>setRecurForm(f=>({
+                                ...f,
+                                categories: on ? f.categories.filter(c=>c!==cat) : [...f.categories, cat],
+                                articleUrl: '',
+                              }))}
+                              style={{ display:'none' }} />
+                            {cat} <span style={{ fontSize:10, opacity:0.6 }}>({CATEGORIES[cat].length})</span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </Field>
                 </div>
 
