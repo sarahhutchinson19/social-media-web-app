@@ -147,7 +147,19 @@ async function fetchArticleMeta(url) {
       .replace(/&quot;/gi, '"')
       .replace(/&#39;/gi, "'")
       .replace(/&apos;/gi, "'")
+      .replace(/&rsquo;/gi, "'")
+      .replace(/&lsquo;/gi, "'")
+      .replace(/&rdquo;/gi, '"')
+      .replace(/&ldquo;/gi, '"')
+      .replace(/&ndash;/gi, '-')
+      .replace(/&mdash;/gi, '-')
       .replace(/&nbsp;/gi, ' ')
+      .replace(/&#8217;/g, "'")   // right single quotation mark / apostrophe
+      .replace(/&#8216;/g, "'")   // left single quotation mark
+      .replace(/&#8220;/g, '"')   // left double quotation mark
+      .replace(/&#8221;/g, '"')   // right double quotation mark
+      .replace(/&#8211;/g, '-')   // en dash
+      .replace(/&#8212;/g, '-')   // em dash
       .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
       .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
 
