@@ -706,21 +706,37 @@ export default function Dashboard() {
                               marginBottom:6, textAlign:'center' }}>
                               {d.toLocaleString('default',{month:'short'})} {d.getDate()}
                             </div>
-                            {daySlots.map(slot=>(
-                              <div key={slot.id}
-                                onClick={()=>{ setHighlightedSlotId(slot.id); if (schedule) setTab('review'); }}
-                                style={{ padding:'4px 6px', borderRadius:4, background:'#fff',
-                                  border:`1px solid ${BORDER}`, marginBottom:4, cursor:'pointer' }}>
-                                <div style={{ display:'flex', gap:2, marginBottom:2 }}>
-                                  {(slot.platforms||[]).map(p=>(
-                                    <span key={p} title={PLATFORM_LABELS[p]}
-                                      style={{ width:6, height:6, borderRadius:'50%', background:PLATFORM_COLORS[p], display:'inline-block' }} />
-                                  ))}
+                            {daySlots.map(slot=>{
+                              // Pick a dominant color from the first platform
+                              const baseColor = slot.platforms?.[0] ? PLATFORM_COLORS[slot.platforms[0]] : BLUE;
+                              const label = slot.topicOverride || slot.category || 'Post';
+                              return (
+                                <div key={slot.id}
+                                  onClick={()=>{ setHighlightedSlotId(slot.id); if (schedule) setTab('review'); }}
+                                  style={{ borderRadius:5, marginBottom:4, cursor:'pointer', overflow:'hidden',
+                                    border:`1px solid ${baseColor}33`,
+                                    background: baseColor + '18' }}>
+                                  {/* Colored top stripe */}
+                                  <div style={{ height:3, background:baseColor, borderRadius:'5px 5px 0 0' }} />
+                                  <div style={{ padding:'3px 6px 4px' }}>
+                                    {/* Platform dots */}
+                                    <div style={{ display:'flex', gap:2, marginBottom:2 }}>
+                                      {(slot.platforms||[]).map(p=>(
+                                        <span key={p} title={PLATFORM_LABELS[p]}
+                                          style={{ width:5, height:5, borderRadius:'50%', background:PLATFORM_COLORS[p], display:'inline-block' }} />
+                                      ))}
+                                    </div>
+                                    {/* Topic label */}
+                                    <div style={{ fontSize:11, fontWeight:600, color:baseColor,
+                                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', lineHeight:1.3 }}>
+                                      {label}
+                                    </div>
+                                    {/* Time */}
+                                    <div style={{ fontSize:10, color:MUTED, marginTop:1 }}>{formatTime(slot.time)}</div>
+                                  </div>
                                 </div>
-                                <div style={{ fontSize:10, color:MUTED }}>{formatTime(slot.time)}</div>
-                                {slot.category && <div style={{ fontSize:10, color:TEXT, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{slot.category}</div>}
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         );
                       })}
