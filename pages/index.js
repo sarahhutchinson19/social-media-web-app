@@ -141,11 +141,17 @@ export default function Dashboard() {
       const ak   = localStorage.getItem('innago-anthropic-key');
       const bitk = localStorage.getItem('innago-bitly-key');
       const blk  = localStorage.getItem('innago-blotato-key');
-      const slots = localStorage.getItem('innago-custom-slots');
-      if (ak)    setAnthropicKey(ak);
-      if (bitk)  setBitlyKey(bitk);
-      if (blk)   setBlotatoKey(blk);
-      if (slots) { try { setCustomSlots(JSON.parse(slots)); } catch {} }
+      const slots    = localStorage.getItem('innago-custom-slots');
+      const sched    = localStorage.getItem('innago-schedule');
+      const postsStr = localStorage.getItem('innago-posts');
+      const statStr  = localStorage.getItem('innago-schedule-status');
+      if (ak)       setAnthropicKey(ak);
+      if (bitk)     setBitlyKey(bitk);
+      if (blk)      setBlotatoKey(blk);
+      if (slots)    { try { setCustomSlots(JSON.parse(slots));       } catch {} }
+      if (sched)    { try { setSchedule(JSON.parse(sched));           } catch {} }
+      if (postsStr) { try { setPosts(JSON.parse(postsStr));           } catch {} }
+      if (statStr)  { try { setScheduleStatus(JSON.parse(statStr));   } catch {} }
     } catch {}
   }, []);
 
@@ -488,10 +494,26 @@ export default function Dashboard() {
     return () => clearTimeout(timer);
   }, [highlightedSlotId, tab]);
 
-  // ── Persist customSlots to localStorage ──────
+  // ── Persist all state to localStorage ────────
   useEffect(() => {
     try { localStorage.setItem('innago-custom-slots', JSON.stringify(customSlots)); } catch {}
   }, [customSlots]);
+
+  useEffect(() => {
+    try {
+      if (schedule !== null) localStorage.setItem('innago-schedule', JSON.stringify(schedule));
+      localStorage.setItem('innago-posts', JSON.stringify(posts));
+      localStorage.setItem('innago-schedule-status', JSON.stringify(scheduleStatus));
+    } catch {}
+  }, [schedule, posts, scheduleStatus]);
+
+  // ── Calendar label — uses article category from generated schedule if available ──
+  const calendarLabel = (slot) => {
+    const schedSlot = schedule?.find(s => s.id === slot.id);
+    if (schedSlot?.article?.category) return schedSlot.article.category;
+    if (schedSlot?.boostedTopic)      return schedSlot.boostedTopic;
+    return slotLabel(slot);
+  };
 
   // ── Sorted slot list for display ─────────────
   const sortedCustomSlots = [...customSlots].sort((a, b) => (a.date+a.time).localeCompare(b.date+b.time));
@@ -685,7 +707,7 @@ export default function Dashboard() {
                             </div>
                             {daySlots.map(slot => {
                               const chipColor = slot.platforms?.[0] ? PLATFORM_COLORS[slot.platforms[0]] : BLUE;
-                              const label = slotLabel(slot);
+                              const label = calendarLabel(slot);
                               return (
                                 <div key={slot.id} style={{ display:'flex', alignItems:'center', gap:2,
                                   marginTop:2, padding:'2px 4px', borderRadius:3,
@@ -729,7 +751,7 @@ export default function Dashboard() {
                             {daySlots.flatMap(slot =>
                               (slot.platforms || [PLATFORMS_LIST[0]]).map(platform => ({
                                 slotId: slot.id, platform, time: slot.time,
-                                label: slotLabel(slot),
+                                label: calendarLabel(slot),
                                 color: PLATFORM_COLORS[platform],
                               }))
                             ).map((item) => (
