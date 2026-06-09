@@ -26,6 +26,35 @@ const TIME_OPTIONS = [
 
 function today() { return new Date().toISOString().slice(0, 10); }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); }
+
+// ── Calendar helpers ──────────────────────────────────────────
+function getMonthGrid(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const y = d.getFullYear(), m = d.getMonth();
+  const firstWd = (new Date(y, m, 1).getDay() + 6) % 7;
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const cells = Array(firstWd).fill(null);
+  for (let i = 1; i <= daysInMonth; i++)
+    cells.push(`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`);
+  return cells;
+}
+function getWeekDates(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+  return Array.from({length:7}, () => { const s = d.toISOString().slice(0,10); d.setDate(d.getDate()+1); return s; });
+}
+function shiftMonth(dateStr, n) {
+  const d = new Date(dateStr + 'T00:00:00'); d.setMonth(d.getMonth() + n); d.setDate(1);
+  return d.toISOString().slice(0,10);
+}
+function monthLabel(dateStr) {
+  return new Date(dateStr + 'T00:00:00').toLocaleString('default', { month:'long', year:'numeric' });
+}
+function weekLabel(dateStr) {
+  const days = getWeekDates(dateStr);
+  const s = new Date(days[0]+'T00:00:00'), e = new Date(days[6]+'T00:00:00');
+  return `${s.toLocaleString('default',{month:'short',day:'numeric'})} – ${e.toLocaleString('default',{month:'short',day:'numeric',year:'numeric'})}`;
+}
 function dayNameFromStr(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   return ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][d.getDay()===0?6:d.getDay()-1];
@@ -72,8 +101,12 @@ export default function Dashboard() {
   });
   // ── Slot list filters ────────────────────────
   const [slotFilterFrom, setSlotFilterFrom] = useState('');
-  const [openCategory, setOpenCategory] = useState(null); // for article library accordion
   const [slotFilterTo, setSlotFilterTo] = useState('');
+  const [openCategory, setOpenCategory] = useState(null);
+  const [scheduleView, setScheduleView] = useState('list');
+  const [calendarMode, setCalendarMode] = useState('month');
+  const [calendarFocus, setCalendarFocus] = useState(today);
+  const [highlightedSlotId, setHighlightedSlotId] = useState(null);
 
   // ── Live article library ─────────────────────
   const [scrapedArticles, setScrapedArticles] = useState([]);  // from /api/scrape-articles
@@ -430,6 +463,21 @@ export default function Dashboard() {
     a.click();
   };
 
+  // ── Scroll to highlighted slot in Review tab ─
+  useEffect(() => {
+    if (!highlightedSlotId || tab !== 'review') return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`slot-card-${highlightedSlotId}`);
+      if (el) {
+        el.scrollIntoView({ behavior:'smooth', block:'center' });
+        el.style.transition = 'box-shadow 0.3s';
+        el.style.boxShadow = `0 0 0 3px ${BLUE}`;
+        setTimeout(() => { el.style.boxShadow = ''; setHighlightedSlotId(null); }, 2000);
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [highlightedSlotId, tab]);
+
   // ── Sorted slot list for display ─────────────
   const sortedCustomSlots = [...customSlots].sort((a, b) => (a.date+a.time).localeCompare(b.date+b.time));
 
@@ -483,78 +531,211 @@ export default function Dashboard() {
         {tab==='config' && (
           <div style={{ display:'flex', flexDirection:'column', gap:22 }}>
 
-            {/* ── Slot list — full width ── */}
-            <Card title={`Your Schedule ${customSlots.length > 0 ? `(${customSlots.length} slot${customSlots.length!==1?'s':''})` : ''}`}>
-              {/* Date filter */}
-              {customSlots.length > 0 && (
-                <div style={{ display:'flex', gap:8, marginBottom:12, alignItems:'center' }}>
-                  <span style={{ fontSize:12, color:MUTED, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', flexShrink:0 }}>Filter:</span>
-                  <input type="date" value={slotFilterFrom} onChange={e=>setSlotFilterFrom(e.target.value)}
-                    placeholder="From" style={{ ...input, fontSize:12, padding:'5px 8px' }} />
-                  <span style={{ color:MUTED, fontSize:13 }}>–</span>
-                  <input type="date" value={slotFilterTo} onChange={e=>setSlotFilterTo(e.target.value)}
-                    placeholder="To" style={{ ...input, fontSize:12, padding:'5px 8px' }} />
-                  {(slotFilterFrom || slotFilterTo) && (
-                    <button onClick={()=>{setSlotFilterFrom('');setSlotFilterTo('');}}
-                      style={{ background:'none', border:'none', cursor:'pointer', color:MUTED, fontSize:18, padding:'0 2px', lineHeight:1, flexShrink:0 }}>×</button>
-                  )}
-                </div>
-              )}
-              {customSlots.length === 0 ? (
-                <div style={{ textAlign:'center', padding:'48px 0', color:MUTED }}>
-                  <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
-                  <p style={{ fontSize:14, margin:0, lineHeight:1.6 }}>No slots yet.<br/>Use Quick Add below to build your schedule.</p>
-                </div>
-              ) : (() => {
-                const filtered = sortedCustomSlots.filter(s =>
-                  (!slotFilterFrom || s.date >= slotFilterFrom) &&
-                  (!slotFilterTo   || s.date <= slotFilterTo)
-                );
-                return (
-                <div style={{ display:'flex', flexDirection:'column', gap:5, maxHeight:400, overflowY:'auto', paddingRight:4 }}>
-                  {filtered.length === 0 && (
-                    <p style={{ fontSize:13, color:MUTED, textAlign:'center', padding:'24px 0' }}>No slots match that date range.</p>
-                  )}
-                  {filtered.map(slot => (
-                    <div key={slot.id} style={{ display:'flex', alignItems:'center', gap:8,
-                      padding:'8px 10px', borderRadius:8, background:BG, fontSize:13 }}>
-                      <span style={{ fontWeight:600, color:TEXT, minWidth:80 }}>{slot.date}</span>
-                      <span style={{ color:MUTED, minWidth:70 }}>{formatTime(slot.time)}</span>
-                      <span style={{ color:MUTED, fontSize:12, minWidth:28 }}>{shortDay(slot.date)}</span>
-                      <div style={{ display:'flex', gap:4, flexShrink:0 }}>
-                        {slot.platforms.map(p=>(
-                          <span key={p} title={PLATFORM_LABELS[p]}
-                            style={{ width:8, height:8, borderRadius:'50%', background:PLATFORM_COLORS[p], display:'inline-block' }} />
-                        ))}
-                      </div>
-                      <span style={{ color:MUTED, fontSize:12, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                        {slot.category || <em>any</em>}
-                      </span>
-                      {slot.articleUrl && (
-                        <span title={allArticles.find(a=>a.url===slot.articleUrl)?.displayTitle || slot.articleUrl}
-                          style={{ fontSize:11, background:'#f0fdf4', color:GREEN, padding:'1px 7px', borderRadius:8, flexShrink:0, maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                          📄 {allArticles.find(a=>a.url===slot.articleUrl)?.displayTitle || 'Pinned'}
-                        </span>
-                      )}
-                      {slot.topicOverride && (
-                        <span style={{ fontSize:11, background:BLUE_BG, color:BLUE, padding:'1px 7px', borderRadius:8, flexShrink:0 }}>
-                          {slot.topicOverride}
-                        </span>
-                      )}
-                      <button onClick={()=>removeSlot(slot.id)}
-                        style={{ background:'none', border:'none', cursor:'pointer', color:MUTED, fontSize:18, padding:'0 4px', lineHeight:1 }}>×</button>
-                    </div>
+            {/* ── Slot list / Calendar ── */}
+            <div style={{ background:'#fff', border:`1px solid ${BORDER}`, borderRadius:12, padding:24 }}>
+              {/* Header with view toggles */}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+                <h3 style={{ margin:0, fontSize:15, fontWeight:600, color:TEXT }}>
+                  Your Schedule {customSlots.length > 0 && `(${customSlots.length} slot${customSlots.length!==1?'s':''})`}
+                </h3>
+                <div style={{ display:'flex', gap:4 }}>
+                  {['list','calendar'].map(v=>(
+                    <button key={v} onClick={()=>setScheduleView(v)}
+                      style={{ padding:'5px 12px', borderRadius:6, cursor:'pointer', fontSize:12,
+                        border:`1px solid ${scheduleView===v?BLUE:BORDER}`,
+                        background:scheduleView===v?BLUE_BG:'#fff',
+                        color:scheduleView===v?BLUE:MUTED, fontWeight:scheduleView===v?600:400 }}>
+                      {v==='list'?'List':'Calendar'}
+                    </button>
                   ))}
                 </div>
-                );
-              })()}
+              </div>
+
+              {/* ── LIST VIEW ── */}
+              {scheduleView === 'list' && (
+                <>
+                  {customSlots.length > 0 && (
+                    <div style={{ display:'flex', gap:8, marginBottom:12, alignItems:'center' }}>
+                      <span style={{ fontSize:12, color:MUTED, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em', flexShrink:0 }}>Filter:</span>
+                      <input type="date" value={slotFilterFrom} onChange={e=>setSlotFilterFrom(e.target.value)}
+                        style={{ ...input, fontSize:12, padding:'5px 8px' }} />
+                      <span style={{ color:MUTED, fontSize:13 }}>–</span>
+                      <input type="date" value={slotFilterTo} onChange={e=>setSlotFilterTo(e.target.value)}
+                        style={{ ...input, fontSize:12, padding:'5px 8px' }} />
+                      {(slotFilterFrom || slotFilterTo) && (
+                        <button onClick={()=>{setSlotFilterFrom('');setSlotFilterTo('');}}
+                          style={{ background:'none', border:'none', cursor:'pointer', color:MUTED, fontSize:18, padding:'0 2px', lineHeight:1 }}>×</button>
+                      )}
+                    </div>
+                  )}
+                  {customSlots.length === 0 ? (
+                    <div style={{ textAlign:'center', padding:'48px 0', color:MUTED }}>
+                      <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
+                      <p style={{ fontSize:14, margin:0, lineHeight:1.6 }}>No slots yet.<br/>Use Quick Add below to build your schedule.</p>
+                    </div>
+                  ) : (() => {
+                    const filtered = sortedCustomSlots.filter(s =>
+                      (!slotFilterFrom || s.date >= slotFilterFrom) &&
+                      (!slotFilterTo   || s.date <= slotFilterTo)
+                    );
+                    return (
+                      <div style={{ display:'flex', flexDirection:'column', gap:5, maxHeight:400, overflowY:'auto', paddingRight:4 }}>
+                        {filtered.length === 0 && <p style={{ fontSize:13, color:MUTED, textAlign:'center', padding:'24px 0' }}>No slots match that date range.</p>}
+                        {filtered.map(slot => (
+                          <div key={slot.id} style={{ display:'flex', alignItems:'center', gap:8,
+                            padding:'8px 10px', borderRadius:8, background:BG, fontSize:13 }}>
+                            <span style={{ fontWeight:600, color:TEXT, minWidth:80 }}>{slot.date}</span>
+                            <span style={{ color:MUTED, minWidth:70 }}>{formatTime(slot.time)}</span>
+                            <span style={{ color:MUTED, fontSize:12, minWidth:28 }}>{shortDay(slot.date)}</span>
+                            <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                              {slot.platforms.map(p=>(
+                                <span key={p} title={PLATFORM_LABELS[p]}
+                                  style={{ width:8, height:8, borderRadius:'50%', background:PLATFORM_COLORS[p], display:'inline-block' }} />
+                              ))}
+                            </div>
+                            <span style={{ color:MUTED, fontSize:12, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                              {slot.category || <em>any</em>}
+                            </span>
+                            {slot.articleUrl && (
+                              <span title={allArticles.find(a=>a.url===slot.articleUrl)?.displayTitle || slot.articleUrl}
+                                style={{ fontSize:11, background:'#f0fdf4', color:GREEN, padding:'1px 7px', borderRadius:8, flexShrink:0, maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                                📄 {allArticles.find(a=>a.url===slot.articleUrl)?.displayTitle || 'Pinned'}
+                              </span>
+                            )}
+                            {slot.topicOverride && (
+                              <span style={{ fontSize:11, background:BLUE_BG, color:BLUE, padding:'1px 7px', borderRadius:8, flexShrink:0 }}>
+                                {slot.topicOverride}
+                              </span>
+                            )}
+                            <button onClick={()=>removeSlot(slot.id)}
+                              style={{ background:'none', border:'none', cursor:'pointer', color:MUTED, fontSize:18, padding:'0 4px', lineHeight:1 }}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+
+              {/* ── CALENDAR VIEW ── */}
+              {scheduleView === 'calendar' && (
+                <>
+                  {/* Nav + mode toggle */}
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <button onClick={()=>setCalendarFocus(f => calendarMode==='month' ? shiftMonth(f,-1) : addDays(f,-7))}
+                        style={{ ...outlineBtn, padding:'4px 10px', fontSize:15 }}>‹</button>
+                      <span style={{ fontWeight:600, fontSize:14, minWidth:200, textAlign:'center' }}>
+                        {calendarMode==='month' ? monthLabel(calendarFocus) : weekLabel(calendarFocus)}
+                      </span>
+                      <button onClick={()=>setCalendarFocus(f => calendarMode==='month' ? shiftMonth(f,1) : addDays(f,7))}
+                        style={{ ...outlineBtn, padding:'4px 10px', fontSize:15 }}>›</button>
+                    </div>
+                    <div style={{ display:'flex', gap:4 }}>
+                      {['month','week'].map(m=>(
+                        <button key={m} onClick={()=>setCalendarMode(m)}
+                          style={{ padding:'4px 12px', borderRadius:6, cursor:'pointer', fontSize:12,
+                            border:`1px solid ${calendarMode===m?BLUE:BORDER}`,
+                            background:calendarMode===m?BLUE_BG:'#fff',
+                            color:calendarMode===m?BLUE:MUTED, fontWeight:calendarMode===m?600:400 }}>
+                          {m==='month'?'Month':'Week'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Day name headers */}
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, marginBottom:4 }}>
+                    {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>(
+                      <div key={d} style={{ textAlign:'center', fontSize:11, fontWeight:600, color:MUTED, padding:'4px 0' }}>{d}</div>
+                    ))}
+                  </div>
+
+                  {/* Month grid */}
+                  {calendarMode === 'month' && (
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2 }}>
+                      {getMonthGrid(calendarFocus).map((dateStr, i) => {
+                        if (!dateStr) return <div key={`e${i}`} style={{ minHeight:60 }} />;
+                        const daySlots = sortedCustomSlots.filter(s => s.date === dateStr);
+                        const isToday = dateStr === today();
+                        const uniquePlatforms = [...new Set(daySlots.flatMap(s=>s.platforms||[]))];
+                        return (
+                          <div key={dateStr}
+                            onClick={daySlots.length > 0 ? ()=>{
+                              setHighlightedSlotId(daySlots[0].id);
+                              if (schedule) setTab('review');
+                            } : undefined}
+                            style={{ minHeight:60, borderRadius:6, padding:'4px 6px',
+                              border:`1px solid ${isToday?BLUE:daySlots.length>0?BORDER:'#f3f4f6'}`,
+                              background: isToday?BLUE_BG : daySlots.length>0?'#fff':'#fafafa',
+                              cursor: daySlots.length>0?'pointer':'default' }}>
+                            <div style={{ fontSize:11, fontWeight:isToday?700:400, color:isToday?BLUE:'#9ca3af', textAlign:'right' }}>
+                              {new Date(dateStr+'T00:00:00').getDate()}
+                            </div>
+                            {daySlots.length > 0 && (
+                              <div style={{ marginTop:3 }}>
+                                <div style={{ display:'flex', gap:2, flexWrap:'wrap' }}>
+                                  {uniquePlatforms.map(p=>(
+                                    <span key={p} title={PLATFORM_LABELS[p]}
+                                      style={{ width:6, height:6, borderRadius:'50%', background:PLATFORM_COLORS[p], display:'inline-block' }} />
+                                  ))}
+                                </div>
+                                <div style={{ fontSize:10, color:MUTED, marginTop:2 }}>
+                                  {daySlots.length} post{daySlots.length!==1?'s':''}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Week grid */}
+                  {calendarMode === 'week' && (
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:4 }}>
+                      {getWeekDates(calendarFocus).map(dateStr => {
+                        const daySlots = sortedCustomSlots.filter(s => s.date === dateStr);
+                        const isToday = dateStr === today();
+                        const d = new Date(dateStr+'T00:00:00');
+                        return (
+                          <div key={dateStr} style={{ minHeight:110, borderRadius:8, padding:'6px 8px',
+                            border:`1px solid ${isToday?BLUE:BORDER}`,
+                            background: isToday?BLUE_BG:'#fafafa' }}>
+                            <div style={{ fontSize:11, fontWeight:600, color:isToday?BLUE:MUTED,
+                              marginBottom:6, textAlign:'center' }}>
+                              {d.toLocaleString('default',{month:'short'})} {d.getDate()}
+                            </div>
+                            {daySlots.map(slot=>(
+                              <div key={slot.id}
+                                onClick={()=>{ setHighlightedSlotId(slot.id); if (schedule) setTab('review'); }}
+                                style={{ padding:'4px 6px', borderRadius:4, background:'#fff',
+                                  border:`1px solid ${BORDER}`, marginBottom:4, cursor:'pointer' }}>
+                                <div style={{ display:'flex', gap:2, marginBottom:2 }}>
+                                  {(slot.platforms||[]).map(p=>(
+                                    <span key={p} title={PLATFORM_LABELS[p]}
+                                      style={{ width:6, height:6, borderRadius:'50%', background:PLATFORM_COLORS[p], display:'inline-block' }} />
+                                  ))}
+                                </div>
+                                <div style={{ fontSize:10, color:MUTED }}>{formatTime(slot.time)}</div>
+                                {slot.category && <div style={{ fontSize:10, color:TEXT, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{slot.category}</div>}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+
               {customSlots.length > 0 && (
                 <button onClick={()=>setCustomSlots([])}
                   style={{ ...outlineBtn, marginTop:12, width:'100%', fontSize:13, color:RED, borderColor:RED }}>
                   Clear all slots
                 </button>
               )}
-            </Card>
+            </div>
 
             {/* ── Article library status ── */}
             <div>
@@ -1006,6 +1187,7 @@ export default function Dashboard() {
 
                     return (
                       <div key={slot.id} style={{
+                        id:`slot-card-${slot.id}`,
                         background:'#fff', border:`1px solid ${overLimit?RED:BORDER}`, borderRadius:10, padding:'16px 20px',
                         borderLeft:`4px solid ${slot.boostedTopic?BLUE:overLimit?RED:BORDER}`,
                         opacity: !platformIncluded ? 0.55 : 1,
