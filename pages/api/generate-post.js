@@ -71,8 +71,29 @@ function injectUtm(post, originalUrl, platform, date) {
   return post.replace(originalUrl, tagUrl(originalUrl, platform, date));
 }
 
-// ── TinyURL shortener for Twitter ─────────────────────────────
-async function shortenUrl(longUrl) {
+// ── Bitly shortener (preserves UTM params inside short link) ──
+async function shortenWithBitly(longUrl, apiKey) {
+  if (!apiKey) return longUrl;
+  try {
+    const res = await fetch('https://api-ssl.bitly.com/v4/shorten', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ long_url: longUrl }),
+      signal: AbortSignal.timeout(6000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.link) return data.link;
+    }
+  } catch {}
+  return longUrl; // fall back to full UTM URL if Bitly fails
+}
+
+// ── TinyURL fallback (used when no Bitly key) ─────────────────
+async function shortenWithTinyUrl(longUrl) {
   try {
     const res = await fetch(
       `https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`,
@@ -209,7 +230,7 @@ Rules: One sentence only. Keep the URL at the end. Stay under 240 chars before t
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { url, displayTitle, date, boostedTopic, anthropicKey } = req.body;
+  const { url, displayTitle, date, boostedTopic, anthropicKey, bitlyKey } = req.body;
   if (!url) return res.status(400).json({ error: 'url is required' });
 
   // Fetch article metadata
@@ -260,15 +281,20 @@ Remember: twitter must be 240 chars or fewer BEFORE the URL. Write each platform
     }
   }
 
-  // Build UTM-tagged versions
-  // Twitter: replace bare URL with TinyURL-shortened UTM link
-  const twitterTaggedUrl = tagUrl(url, 'twitter', date);
-  const twitterShortUrl = await shortenUrl(twitterTaggedUrl);
-  const post_twitter_x = twitterPost.replace(url, twitterShortUrl);
+  // Shorten all UTM-tagged URLs via Bitly (falls back to TinyURL for Twitter, full URL otherwise)
+  const shorten = (longUrl) => bitlyKey
+    ? shortenWithBitly(longUrl, bitlyKey)
+    : shortenWithTinyUrl(longUrl);
 
-  // Other platforms: standard UTM injection
-  const post_linkedin  = injectUtm(posts.linkedin  || posts.twitter || twitterPost, url, 'linkedin',  date);
-  const post_facebook  = injectUtm(posts.facebook  || posts.linkedin || '', url, 'facebook',  date);
+  const [twitterShortUrl, linkedinShortUrl, facebookShortUrl] = await Promise.all([
+    shorten(tagUrl(url, 'twitter',  date)),
+    shorten(tagUrl(url, 'linkedin', date)),
+    shorten(tagUrl(url, 'facebook', date)),
+  ]);
+
+  const post_twitter_x = twitterPost.replace(url, twitterShortUrl);
+  const post_linkedin  = (posts.linkedin  || posts.twitter || twitterPost).replace(url, linkedinShortUrl);
+  const post_facebook  = (posts.facebook  || posts.linkedin || '').replace(url, facebookShortUrl);
 
   // Instagram: no URL in caption — remove any URL that slipped through, ensure "Link in bio." is present
   let instagramCaption = posts.instagram || posts.linkedin || '';

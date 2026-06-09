@@ -91,6 +91,15 @@ export default function Dashboard() {
     try { localStorage.setItem('innago-anthropic-key', key); } catch {}
   };
 
+  // ── Bitly API key ────────────────────────────
+  const [bitlyKey, setBitlyKey] = useState(() => {
+    try { return localStorage.getItem('innago-bitly-key') || ''; } catch { return ''; }
+  });
+  const saveBitlyKey = (key) => {
+    setBitlyKey(key);
+    try { localStorage.setItem('innago-bitly-key', key); } catch {}
+  };
+
   // ── Blotato config ──────────────────────────
   const [blotatoKey, setBlotatoKey] = useState(() => {
     try { return localStorage.getItem('innago-blotato-key') || ''; } catch { return ''; }
@@ -290,7 +299,7 @@ export default function Dashboard() {
         const r = await fetch('/api/generate-post', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: slot.article.url, displayTitle: slot.article.displayTitle, date: slot.date, boostedTopic: slot.boostedTopic || undefined, anthropicKey: anthropicKey || undefined }),
+          body: JSON.stringify({ url: slot.article.url, displayTitle: slot.article.displayTitle, date: slot.date, boostedTopic: slot.boostedTopic || undefined, anthropicKey: anthropicKey || undefined, bitlyKey: bitlyKey || undefined }),
         });
         postData = await r.json();
         setPosts(p => ({ ...p, [slot.id]: postData }));
@@ -366,7 +375,7 @@ export default function Dashboard() {
       const r = await fetch('/api/generate-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: slot.article.url, displayTitle: slot.article.displayTitle, date: slot.date, boostedTopic: slot.boostedTopic || undefined, anthropicKey: anthropicKey || undefined }),
+        body: JSON.stringify({ url: slot.article.url, displayTitle: slot.article.displayTitle, date: slot.date, boostedTopic: slot.boostedTopic || undefined, anthropicKey: anthropicKey || undefined, bitlyKey: bitlyKey || undefined }),
       });
       const postData = await r.json();
       setPosts(p => ({ ...p, [slot.id]: postData }));
@@ -391,6 +400,7 @@ export default function Dashboard() {
           content_type: slot.article?.content_type || 'blog post',
           url: slot.article?.url,
           anthropicKey: anthropicKey || undefined,
+          bitlyKey: bitlyKey || undefined,
         }),
       });
       const data = await r.json();
@@ -733,6 +743,28 @@ export default function Dashboard() {
                 )}
               </Card>
             </div>
+
+            <Card title="Bitly API Key">
+              <p style={{ margin:'0 0 14px', fontSize:13, color:MUTED }}>
+                Used to shorten article links on LinkedIn, Facebook, and Twitter/X. UTM tracking parameters are preserved inside the short link.
+                Get your key at <a href="https://app.bitly.com/settings/api" target="_blank" rel="noreferrer" style={{ color:BLUE }}>app.bitly.com/settings/api</a>.
+              </p>
+              <Field label="Bitly access token">
+                <input type="password" placeholder="Paste your Bitly access token…"
+                  value={bitlyKey} onChange={e=>saveBitlyKey(e.target.value)} style={input} />
+              </Field>
+              {bitlyKey ? (
+                <div style={{ marginTop:10, padding:'8px 12px', background:'#f0fdf4',
+                  border:'1px solid #bbf7d0', borderRadius:8, fontSize:13, color:GREEN }}>
+                  ✓ Key saved — links will be shortened via Bitly
+                </div>
+              ) : (
+                <div style={{ marginTop:10, padding:'8px 12px', background:'#fef9ec',
+                  border:'1px solid #fde68a', borderRadius:8, fontSize:13, color:YELLOW }}>
+                  ⚠ No key entered — links will use full UTM-tagged URLs
+                </div>
+              )}
+            </Card>
 
             <Card title="Blotato Connection">
               <p style={{ margin:'0 0 14px', fontSize:13, color:MUTED }}>
