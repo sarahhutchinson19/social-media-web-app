@@ -58,6 +58,7 @@ export default async function handler(req, res) {
 
   const scheduledTime = buildScheduledTime(slot.date, postingTime);
   const results = {};
+  const imageUrl = slot.image_url || '';
 
   const platforms = Object.keys(accountMapping).filter(
     (p) => accountMapping[p]?.accountId
@@ -74,12 +75,21 @@ export default async function handler(req, res) {
         return;
       }
 
+      // Image strategy per platform:
+      //   Instagram → always include image (required for posts)
+      //   LinkedIn  → include image when available
+      //   Facebook  → include image when available
+      //   Twitter   → never include image
+      const shouldIncludeImage = imageUrl && platform !== 'twitter';
+      const mediaUrls = shouldIncludeImage ? [imageUrl] : [];
+
       const payload = buildPostPayload({
         accountId,
         pageId: pageId || null,
         platform: PLATFORM_SLUG[platform],
         text,
         scheduledTime,
+        mediaUrls,
       });
 
       results[platform] = await publishPost(apiKey, payload);
