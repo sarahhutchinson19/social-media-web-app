@@ -14,103 +14,108 @@ import Anthropic from '@anthropic-ai/sdk';
 const INNAGO_LOGO_URL =
   'https://res.cloudinary.com/dam3qptkg/image/upload/v1773275475/Innago_White_transparent_2_ww7aro.png';
 
-const IMAGE_SYSTEM_PROMPT = `You write a complete 1080×1080px HTML social media graphic for Innago.
-Return ONLY the raw HTML — a single <div> containing all elements. No DOCTYPE, no <html>,
-no <head>, no <style> blocks, no markdown fences, no explanations. Inline styles only.
+const IMAGE_SYSTEM_PROMPT = `You write a complete 1080×1080px HTML social media graphic for Innago, a free property management platform.
+Return ONLY the raw HTML — a single <div> containing all elements. No DOCTYPE, no <html>, no <head>, no <style> blocks, no markdown fences, no explanations. Inline styles only.
 
-━━━━━━━━━━━  BRAND TOKENS  ━━━━━━━━━━━
-COLORS (use ONLY these):
-  #2676FF  Primary blue        — hero backgrounds, CTAs, stat numbers
-  #8A47DF  Purple              — accent blobs, pill labels, quote marks
-  #2E3B47  Dark navy           — dark backgrounds, text on light
-  #44D7B6  Teal / mint         — highlight pills, secondary accents
-  #DDF247  Lime yellow         — bold accent words on dark backgrounds
-  #F6B42A  Amber               — star ratings, warm highlights
-  #ffffff  White               — all body text, logo tint
-  rgba(255,255,255,0.70)  — secondary body text
-  rgba(255,255,255,0.40)  — captions, watermarks
+━━━━━━━━━━━  BRAND COLORS  ━━━━━━━━━━━
+Primary:   #2676FF  blue  |  #2E3B47  dark navy  |  #ffffff  white
+Accents:   #8A47DF  purple  |  #44D7B6  teal  |  #DDF247  lime  |  #F6B42A  amber  |  #FF6D5A  coral
+Text:      rgba(255,255,255,0.85) body on dark  |  rgba(255,255,255,0.45) captions
+Gradients: linear-gradient(135deg,#2676FF,#8A47DF) — blue-purple hero
+           linear-gradient(160deg,#2E3B47 0%,#1a2535 100%) — deep dark
 
-FONT: font-family:'Poppins',sans-serif  (already embedded — always use this exactly)
-  font-weight:700  Headlines, stat numbers, bold words
-  font-weight:600  Subheadings, pill labels, CTA text
-  font-weight:400  Body text, quotes
-  font-weight:300  Captions, footnotes
-
-LOGO: always render as:
-  <img src="INNAGO_LOGO" style="height:44px;display:block;" alt="innago">
-  Place at top-left OR bottom-left. Never stretch or recolor.
+FONT: font-family:'Poppins',sans-serif — weights 300/400/600/700
+LOGO: <img src="INNAGO_LOGO" style="height:44px;display:block;" alt="innago"> — top-left or bottom-left always
 
 ━━━━━━━━━━━  CANVAS RULES  ━━━━━━━━━━━
 - Outer wrapper: width:1080px; height:1080px; position:relative; overflow:hidden
-- Use position:absolute for ALL child elements. No flexbox/grid on the root.
-- Padding from edges: minimum 72px on all sides for text content
-- TEXT MUST FILL THE CARD: headline font-size minimum 72px, maximum 108px.
-  Use line-height:1.1. Wrap to 2–3 lines. Never let large whitespace dominate.
-- No external images except the logo.
+- position:absolute for ALL child elements
+- Minimum 72px padding from edges for text
+- Headline minimum 72px, maximum 108px. Wrap to 2–3 lines. Fill the card — no dead space.
+- Logo and "innago.com" watermark must always appear
 
-━━━━━━━━━━━  FIVE LAYOUT TEMPLATES — PICK ONE  ━━━━━━━━━━━
+━━━━━━━━━━━  SEVEN LAYOUT TEMPLATES — PICK THE BEST ONE  ━━━━━━━━━━━
 
-TEMPLATE A — BOLD FULL-BLEED TEXT (best for blog/tips)
-  Background: solid #2676FF
-  Top-left: logo (height 44px)
-  Center: giant headline, Poppins 700, 88–108px, white, line-height:1.05
-          takes up ~70% of card height — text IS the visual
-  Bottom-right: "innago.com" Poppins 300 18px rgba(255,255,255,0.40)
-  Accents: one #8A47DF circle blob top-right (400px, opacity:0.25, position:absolute)
-           one smaller #8A47DF circle bottom-left (200px, opacity:0.15)
-
-TEMPLATE B — PILL LABEL + HEADLINE (best for feature/definition posts)
-  Background: solid #2E3B47
+TEMPLATE A — BOLD GRADIENT HERO (blog posts, general tips)
+  Background: linear-gradient(135deg,#2676FF 0%,#8A47DF 100%)
   Top-left: logo
-  Below logo (top:140px): pill label — rounded rectangle, background:#8A47DF,
-    Poppins 600 22px white, padding:12px 28px, border-radius:100px
-    Text = article category / topic keyword (1–3 words)
-  Below pill: headline Poppins 700 80–96px white, line-height:1.1, 2–3 lines
-  Bottom: thin #44D7B6 horizontal line (4px tall, left:72px, right:72px)
-  Bottom-right: "innago.com" caption
-  Accent: #8A47DF blob top-right, opacity 0.20
+  Center: giant headline Poppins 700 88–108px white, line-height:1.05, 2–3 lines
+  One or two accent words in #DDF247 (lime) for visual punch
+  Decorative: 2–3 overlapping circles (300–500px) in white opacity 0.06–0.12, positioned off-edges
+  Bottom stripe: 6px tall #44D7B6 horizontal bar at very bottom
+  Bottom-right: "innago.com" Poppins 300 16px rgba(255,255,255,0.40)
 
-TEMPLATE C — STAT CALLOUT (use when article has a percentage or number)
-  Background: solid #2676FF
+TEMPLATE B — DARK CARD WITH PILL LABEL (definitions, feature posts)
+  Background: linear-gradient(160deg,#2E3B47,#1a2535)
   Top-left: logo
-  Giant stat: Poppins 700 160px #DDF247 (lime), centered, top:260px — this is THE hero
-  Below stat: short label Poppins 600 32px white
-  Below label: one sentence context Poppins 400 26px rgba(255,255,255,0.75), max 10 words
+  Top-left below logo: pill — background:#8A47DF, Poppins 600 20px white, padding:10px 24px, border-radius:100px
+  Headline below pill: Poppins 700 80–96px white, line-height:1.1
+  Bottom accent: 4px #44D7B6 horizontal line spanning card width minus 144px margins
+  Large decorative circle top-right: #8A47DF 500px opacity 0.15
   Bottom-right: "innago.com" caption
-  Accent: large #8A47DF circle centered behind stat (600px, opacity:0.18)
 
-TEMPLATE D — QUOTE CARD (best for testimonials / case studies)
-  Background: solid #8A47DF  (purple is the hero color here)
+TEMPLATE C — STAT CALLOUT (articles with a key number or percentage)
+  Background: #2676FF
   Top-left: logo
-  Top-right area: giant quotation mark " " — Poppins 700 220px #2676FF, opacity:0.35
-  Center: quote text Poppins 400 italic 44–52px white, line-height:1.35, max 3 lines
-           Use real excerpt from summary if available; else derive from title
-  Below quote: attribution — Poppins 600 24px rgba(255,255,255,0.80), e.g. "— LANDLORD TIP"
+  Center: giant stat Poppins 700 160px #DDF247 — THE visual hero, centered at top:240px
+  Below stat: 2-line label Poppins 600 30px white
+  Below that: one sentence Poppins 400 24px rgba(255,255,255,0.75), max 12 words
+  Accent: large circle #8A47DF 650px centered behind stat, opacity 0.15
+  Bottom: #44D7B6 6px stripe + "innago.com" caption
+
+TEMPLATE D — QUOTE / TESTIMONIAL CARD (case studies, landlord tips)
+  Background: solid #8A47DF
+  Top-left: logo
+  Giant " mark: Poppins 700 260px #2676FF opacity 0.30, top-right corner, position:absolute
+  Quote text: Poppins 400 italic 44–52px white, line-height:1.4, centered horizontally, top:~300px
+  Attribution: Poppins 600 22px rgba(255,255,255,0.75), e.g. "— Property Management Tip"
+  Two CSS clip-path triangles in #2676FF opacity 0.18 — bottom corners for visual texture
   Bottom-right: "innago.com" caption
 
-TEMPLATE E — SPLIT COLOR BLOCK (best for how-to / list articles)
-  Background: top 55% = #2676FF, bottom 45% = #2E3B47 (two stacked divs)
-  Logo: top-left on blue section
-  Headline: Poppins 700 80px white, positioned to span across the color break, top:~200px
-  Bottom section: 2–3 short bullet points, Poppins 500 28px rgba(255,255,255,0.85), #44D7B6 "• " prefix
+TEMPLATE E — SPLIT COLOR BLOCK WITH BULLETS (how-to, numbered lists)
+  Top 52%: #2676FF  |  Bottom 48%: #2E3B47
+  Logo: top-left in blue zone
+  Headline: Poppins 700 80px white, spans the color break, top:~180px, left:72px
+  In dark zone: 2–3 short bullets, Poppins 500 26px rgba(255,255,255,0.88), prefixed with #44D7B6 "▸ "
+  Right side of dark zone: large abstract circle #8A47DF 380px opacity 0.20
   Bottom-right: "innago.com" caption
 
-━━━━━━━━━━━  SELECTION RULES  ━━━━━━━━━━━
-- TEMPLATE C if the article has a clear stat/percentage
-- TEMPLATE D if content_type is "case study" or summary contains a quote
-- TEMPLATE B if content_type is "definition" or has a clear category keyword
-- TEMPLATE E if article is a list / how-to (title contains numbers or "tips")
-- TEMPLATE A as default for all other blog posts
+TEMPLATE F — GEOMETRIC FEATURE CARD (property management software, tools)
+  Background: white (#ffffff)
+  Large blue filled rectangle left 60% of card, full height — like a sidebar hero
+  Right 40%: white, contains logo (blue version), headline Poppins 700 52px #2E3B47, 3–4 lines
+  On the blue zone: giant icon-style shape (house outline or key shape) in white opacity 0.12, ~400px
+  Headline in blue zone: Poppins 700 72px white, centered vertically
+  Bottom of white zone: "innago.com" Poppins 300 14px #69727A
+  Thin #44D7B6 accent line at very bottom full width
 
-━━━━━━━━━━━  CRITICAL QUALITY RULES  ━━━━━━━━━━━
-1. HEADLINE TEXT MUST BE LARGE. Minimum 72px. If the text looks small, make it bigger.
-2. Text must fill the card. No large empty areas.
-3. Never use ALL CAPS — sentence case only.
-4. Headline is a rewrite of the title for visual punch — not a copy of the title.
-5. Headline max 6 words per line. Break into 2–3 lines.
-6. The logo must always be present at src="INNAGO_LOGO". Never omit it.
-7. "innago.com" watermark always present, bottom area, small, low opacity.
-8. No external images other than the logo.`;
+TEMPLATE G — BOLD DARK WITH ACCENT WORD (high-energy, eviction/legal topics)
+  Background: #2E3B47 with subtle diagonal stripe pattern (repeating linear-gradient 45deg white 1px, transparent 1px, transparent 40px — background-size:56px 56px, opacity:0.04 overlay div)
+  Top-left: logo (white version)
+  Headline: Poppins 700 88px white, left-aligned, top:180px — 2 lines max
+  One key word or phrase on its own line in #DDF247 (lime), same size — creates bold contrast
+  Right side: large rounded rectangle shape (border-radius:40px) in #2676FF opacity 0.25, 420×520px, right:-60px, top:80px
+  Inside that shape: Poppins 300 22px rgba(255,255,255,0.50) — 3–4 word category label, centered
+  Bottom: #F6B42A 6px stripe + "innago.com" caption
+
+━━━━━━━━━━━  TEMPLATE SELECTION  ━━━━━━━━━━━
+C → article has a clear stat/number
+D → case study or summary has a quote
+B → definition or clear single-category topic
+E → list / how-to (title has numbers or "tips")
+F → property management software / tools topic
+G → eviction, legal, or high-stakes topic
+A → default for general blog posts
+
+━━━━━━━━━━━  QUALITY RULES  ━━━━━━━━━━━
+1. Headline minimum 72px. Fill the card — no large empty zones.
+2. Sentence case only (no ALL CAPS headlines).
+3. Rewrite the title for visual punch — don't just copy it.
+4. Max 6 words per headline line. Break at natural phrase boundaries.
+5. Logo (INNAGO_LOGO) must always appear.
+6. "innago.com" watermark always in bottom area, small, low opacity.
+7. Use decorative shapes — circles, rectangles, triangles — to add visual depth. Not word-only.
+8. No external images except the logo.`;
 
 function extractStat(title, summary) {
   const text = `${title} ${summary}`;
@@ -137,6 +142,10 @@ export default async function handler(req, res) {
     templateHint = 'Prefer TEMPLATE B.';
   } else if (/\b(tips?|steps?|ways?|mistakes?|\d+\s)/i.test(title)) {
     templateHint = 'Prefer TEMPLATE E.';
+  } else if (/software|tool|platform|app|feature|checklist/i.test(title)) {
+    templateHint = 'Prefer TEMPLATE F.';
+  } else if (/evict|legal|notice|court|squatter|law|rights/i.test(title)) {
+    templateHint = 'Prefer TEMPLATE G.';
   } else {
     templateHint = 'Prefer TEMPLATE A.';
   }

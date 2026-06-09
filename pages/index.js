@@ -1421,7 +1421,7 @@ export default function Dashboard() {
                           </div>
                         )}
 
-                        {/* Universal view — stacked per-platform posts */}
+                        {/* Universal view — stacked per-platform posts with per-platform editing */}
                         {activePlatform === 'universal' && p && !p.error && !isLoading && (
                           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                             {PLATFORMS_LIST.filter(pl => !slot.platforms || slot.platforms.includes(pl)).map(pl => {
@@ -1433,6 +1433,8 @@ export default function Dashboard() {
                               const plNear = plLimit && plCount > plLimit * 0.9 && !plOver;
                               const plCopyKey = `${slot.id}::${plField}`;
                               const plCopied = copiedKey === plCopyKey;
+                              const plEditKey = `${slot.id}::${plField}`;
+                              const plEditing = editingKey === plEditKey;
                               return (
                                 <div key={pl} style={{ borderRadius:8, border:`1px solid ${plOver?RED:BORDER}`,
                                   borderLeft:`3px solid ${PLATFORM_COLORS[pl]}`, padding:'10px 14px', background:BG }}>
@@ -1454,11 +1456,24 @@ export default function Dashboard() {
                                           fontSize:12, color:plCopied?GREEN:MUTED, padding:'2px 6px' }}>
                                         {plCopied ? '✓ Copied' : 'Copy'}
                                       </button>
+                                      <button onClick={()=>plEditing ? saveEdit(slot.id, plField) : startEdit(slot.id, plField)}
+                                        style={{ background:'none', border:'none', cursor:'pointer',
+                                          fontSize:12, color:plEditing?BLUE:MUTED, padding:'2px 6px', fontWeight:plEditing?600:400 }}>
+                                        {plEditing ? 'Save' : 'Edit'}
+                                      </button>
                                     </div>
                                   </div>
-                                  <p style={{ margin:0, fontSize:13, lineHeight:1.6, color:'#374151', whiteSpace:'pre-wrap' }}>
-                                    {plText}
-                                  </p>
+                                  {plEditing ? (
+                                    <textarea value={editDraft} onChange={e=>setEditDraft(e.target.value)}
+                                      style={{ width:'100%', minHeight:90, padding:8, borderRadius:6,
+                                        border:`1.5px solid ${PLATFORM_COLORS[pl]}`, fontSize:13, lineHeight:1.6,
+                                        fontFamily:'inherit', resize:'vertical', boxSizing:'border-box', outline:'none' }}
+                                      autoFocus />
+                                  ) : (
+                                    <p style={{ margin:0, fontSize:13, lineHeight:1.6, color:'#374151', whiteSpace:'pre-wrap' }}>
+                                      {plText}
+                                    </p>
+                                  )}
                                 </div>
                               );
                             })}
