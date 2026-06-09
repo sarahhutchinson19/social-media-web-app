@@ -72,6 +72,7 @@ export default function Dashboard() {
   });
   // ── Slot list filters ────────────────────────
   const [slotFilterFrom, setSlotFilterFrom] = useState('');
+  const [openCategory, setOpenCategory] = useState(null); // for article library accordion
   const [slotFilterTo, setSlotFilterTo] = useState('');
 
   // ── Live article library ─────────────────────
@@ -700,6 +701,56 @@ export default function Dashboard() {
                     }
                     return count > 0 ? <span style={{ fontSize:13, color:MUTED }}>Will add {count} slot{count!==1?'s':''}</span> : null;
                   })()}
+                </div>
+              </Card>
+            </div>
+
+            {/* ── Article Library ── */}
+            <div>
+              <Card title={`Article Library (${ALL_ARTICLES.length} articles across ${Object.keys(CATEGORIES).length} categories)`}>
+                <p style={{ margin:'0 0 12px', fontSize:13, color:MUTED }}>
+                  Click a category to browse its articles. Links open the article on innago.com.
+                </p>
+                <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                  {Object.entries(CATEGORIES).map(([cat, urls]) => {
+                    const isOpen = openCategory === cat;
+                    return (
+                      <div key={cat} style={{ borderRadius:8, border:`1px solid ${BORDER}`, overflow:'hidden' }}>
+                        {/* Category header */}
+                        <button onClick={()=>setOpenCategory(isOpen ? null : cat)}
+                          style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+                            padding:'9px 14px', background:isOpen?BLUE_BG:'#fff', border:'none', cursor:'pointer',
+                            fontSize:13, fontWeight:isOpen?600:400, color:isOpen?BLUE:TEXT }}>
+                          <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <span style={{ width:7, height:7, borderRadius:'50%', background:isOpen?BLUE:MUTED, display:'inline-block', flexShrink:0 }} />
+                            {cat}
+                          </span>
+                          <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <span style={{ fontSize:11, color:isOpen?BLUE:MUTED, fontWeight:400 }}>{urls.length} articles</span>
+                            <span style={{ fontSize:12, color:isOpen?BLUE:MUTED }}>{isOpen ? '▲' : '▼'}</span>
+                          </span>
+                        </button>
+                        {/* Article list */}
+                        {isOpen && (
+                          <div style={{ padding:'8px 14px 12px', background:BG,
+                            display:'grid', gridTemplateColumns:'1fr 1fr', gap:'4px 16px' }}>
+                            {urls.map(url => {
+                              const slug = url.replace(/^https?:\/\/innago\.com\//, '').replace(/\/$/, '');
+                              const title = slug.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+                              return (
+                                <a key={url} href={url} target="_blank" rel="noreferrer"
+                                  style={{ fontSize:12, color:BLUE, textDecoration:'none', lineHeight:1.5,
+                                    whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}
+                                  title={title}>
+                                  {title}
+                                </a>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </Card>
             </div>
