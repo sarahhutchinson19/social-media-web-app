@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(which node *)",
+      "Bash(find /opt/homebrew /usr/local /Users/sarahhutchinson/.nvm /Users/sarahhutchinson/.volta -name \"npm\" -type f 2>/dev/null | head -5; ls /Users/sarahhutchinson/.nvm/versions/node/ 2>/dev/null || true)",
+      "Bash(mkdir -p \"/Users/sarahhutchinson/Claude/Projects/Social Media Web App/.claude\")",
+      "mcp__Claude_Preview__preview_start",
+      "Read(//Users/sarahhutchinson/**)",
+      "Bash(mdfind -name npm)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(node -e \"require\\('./pages/index.js'\\)\")"
+    ]
+  }
+}

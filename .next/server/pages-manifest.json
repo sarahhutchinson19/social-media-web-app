@@ -1,0 +1,9 @@
+{
+  "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
+  "/_document": "pages/_document.js",
+  "/api/generate-post": "pages/api/generate-post.js",
+  "/api/blotato/accounts": "pages/api/blotato/accounts.js",
+  "/api/blotato/schedule-slot": "pages/api/blotato/schedule-slot.js",
+  "/": "pages/index.js"
+}
