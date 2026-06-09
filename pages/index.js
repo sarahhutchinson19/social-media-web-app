@@ -70,6 +70,19 @@ function formatTime(timeStr) {
   const hour = h % 12 || 12;
   return `${hour}:${String(m).padStart(2,'0')} ${period}`;
 }
+/** Best display label for a slot — topic override > single category > first of multi > first article > fallback */
+function slotLabel(slot) {
+  if (slot.topicOverride) return slot.topicOverride;
+  if (slot.category)      return slot.category;
+  if (slot.categories && slot.categories.length > 0 && slot.categories.length < Object.keys(CATEGORIES).length)
+    return slot.categories.length === 1 ? slot.categories[0] : slot.categories[0];
+  if (slot.articleUrl) {
+    const slug = slot.articleUrl.replace(/^https?:\/\/innago\.com\//, '').replace(/\/$/, '');
+    return slug.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase()).slice(0,30);
+  }
+  return 'Innago Post';
+}
+
 /** ISO week key — e.g. "2026-W23" — used for per-week image assignment */
 function isoWeekKey(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
@@ -122,14 +135,17 @@ export default function Dashboard() {
   const [bitlyKey, setBitlyKey] = useState('');
   const [blotatoKey, setBlotatoKey] = useState('');
 
+  // Load all persisted data from localStorage after mount
   useEffect(() => {
     try {
       const ak   = localStorage.getItem('innago-anthropic-key');
       const bitk = localStorage.getItem('innago-bitly-key');
       const blk  = localStorage.getItem('innago-blotato-key');
-      if (ak)   setAnthropicKey(ak);
-      if (bitk) setBitlyKey(bitk);
-      if (blk)  setBlotatoKey(blk);
+      const slots = localStorage.getItem('innago-custom-slots');
+      if (ak)    setAnthropicKey(ak);
+      if (bitk)  setBitlyKey(bitk);
+      if (blk)   setBlotatoKey(blk);
+      if (slots) { try { setCustomSlots(JSON.parse(slots)); } catch {} }
     } catch {}
   }, []);
 
@@ -472,6 +488,11 @@ export default function Dashboard() {
     return () => clearTimeout(timer);
   }, [highlightedSlotId, tab]);
 
+  // ── Persist customSlots to localStorage ──────
+  useEffect(() => {
+    try { localStorage.setItem('innago-custom-slots', JSON.stringify(customSlots)); } catch {}
+  }, [customSlots]);
+
   // ── Sorted slot list for display ─────────────
   const sortedCustomSlots = [...customSlots].sort((a, b) => (a.date+a.time).localeCompare(b.date+b.time));
 
@@ -664,7 +685,7 @@ export default function Dashboard() {
                             </div>
                             {daySlots.map(slot => {
                               const chipColor = slot.platforms?.[0] ? PLATFORM_COLORS[slot.platforms[0]] : BLUE;
-                              const label = slot.topicOverride || slot.category || 'Post';
+                              const label = slotLabel(slot);
                               return (
                                 <div key={slot.id} style={{ display:'flex', alignItems:'center', gap:2,
                                   marginTop:2, padding:'2px 4px', borderRadius:3,
@@ -708,7 +729,7 @@ export default function Dashboard() {
                             {daySlots.flatMap(slot =>
                               (slot.platforms || [PLATFORMS_LIST[0]]).map(platform => ({
                                 slotId: slot.id, platform, time: slot.time,
-                                label: slot.topicOverride || slot.category || 'Post',
+                                label: slotLabel(slot),
                                 color: PLATFORM_COLORS[platform],
                               }))
                             ).map((item) => (
