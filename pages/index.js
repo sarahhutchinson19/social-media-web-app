@@ -90,7 +90,13 @@ export default function Dashboard() {
   };
 
   // ── Blotato config ──────────────────────────
-  const [blotatoKey, setBlotatoKey] = useState('');
+  const [blotatoKey, setBlotatoKey] = useState(() => {
+    try { return localStorage.getItem('innago-blotato-key') || ''; } catch { return ''; }
+  });
+  const saveBlotatoKey = (key) => {
+    setBlotatoKey(key);
+    try { localStorage.setItem('innago-blotato-key', key); } catch {}
+  };
   const [accounts, setAccounts] = useState(null);
   const [accountsLoading, setAccountsLoading] = useState(false);
   const [accountsError, setAccountsError] = useState('');
@@ -706,7 +712,7 @@ export default function Dashboard() {
               <Field label="Blotato API key">
                 <input type="password"
                   placeholder={process.env.NEXT_PUBLIC_HAS_BLOTATO_KEY==='true' ? '••••• (set via env var)' : 'paste your API key here'}
-                  value={blotatoKey} onChange={e=>setBlotatoKey(e.target.value)} style={input} />
+                  value={blotatoKey} onChange={e=>saveBlotatoKey(e.target.value)} style={input} />
               </Field>
               <p style={{ margin:'14px 0 0', fontSize:12, color:MUTED }}>
                 Post times are set per-slot in the Schedule tab. This fallback only applies if a slot has no time set.
