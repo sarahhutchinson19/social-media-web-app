@@ -638,16 +638,12 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Day name headers */}
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, marginBottom:4 }}>
-                    {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>(
-                      <div key={d} style={{ textAlign:'center', fontSize:11, fontWeight:600, color:MUTED, padding:'4px 0' }}>{d}</div>
-                    ))}
-                  </div>
-
-                  {/* Month grid */}
+                  {/* Month grid — headers are row 1 of the same grid so they always align */}
                   {calendarMode === 'month' && (
                     <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2 }}>
+                      {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>(
+                        <div key={d} style={{ textAlign:'center', fontSize:11, fontWeight:600, color:MUTED, padding:'4px 0 6px' }}>{d}</div>
+                      ))}
                       {getMonthGrid(calendarFocus).map((dateStr, i) => {
                         if (!dateStr) return <div key={`e${i}`} style={{ minHeight:60 }} />;
                         const daySlots = sortedCustomSlots.filter(s => s.date === dateStr);
@@ -685,9 +681,12 @@ export default function Dashboard() {
                     </div>
                   )}
 
-                  {/* Week grid */}
+                  {/* Week grid — headers are row 1 of the same grid so they always align */}
                   {calendarMode === 'week' && (
                     <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:4 }}>
+                      {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>(
+                        <div key={d} style={{ textAlign:'center', fontSize:11, fontWeight:600, color:MUTED, padding:'4px 0 6px' }}>{d}</div>
+                      ))}
                       {getWeekDates(calendarFocus).map(dateStr => {
                         const daySlots = sortedCustomSlots.filter(s => s.date === dateStr);
                         const isToday = dateStr === today();
@@ -706,7 +705,7 @@ export default function Dashboard() {
                                 label: slot.topicOverride || slot.category || 'Post',
                                 color: PLATFORM_COLORS[platform],
                               }))
-                            ).map((item, idx) => (
+                            ).map((item) => (
                               <div key={`${item.slotId}-${item.platform}`}
                                 onClick={()=>{ setHighlightedSlotId(item.slotId); if (schedule) setTab('review'); }}
                                 style={{ borderRadius:5, marginBottom:3, cursor:'pointer', padding:'4px 7px',
