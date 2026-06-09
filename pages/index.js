@@ -662,19 +662,25 @@ export default function Dashboard() {
                             <div style={{ fontSize:11, fontWeight:isToday?700:400, color:isToday?BLUE:'#9ca3af', textAlign:'right' }}>
                               {new Date(dateStr+'T00:00:00').getDate()}
                             </div>
-                            {daySlots.length > 0 && (
-                              <div style={{ marginTop:3 }}>
-                                <div style={{ display:'flex', gap:2, flexWrap:'wrap' }}>
-                                  {uniquePlatforms.map(p=>(
-                                    <span key={p} title={PLATFORM_LABELS[p]}
-                                      style={{ width:6, height:6, borderRadius:'50%', background:PLATFORM_COLORS[p], display:'inline-block' }} />
-                                  ))}
+                            {daySlots.map(slot => {
+                              const chipColor = slot.platforms?.[0] ? PLATFORM_COLORS[slot.platforms[0]] : BLUE;
+                              const label = slot.topicOverride || slot.category || 'Post';
+                              return (
+                                <div key={slot.id} style={{ display:'flex', alignItems:'center', gap:2,
+                                  marginTop:2, padding:'2px 4px', borderRadius:3,
+                                  background:chipColor+'15', border:`1px solid ${chipColor}33` }}>
+                                  <span style={{ fontSize:9, color:chipColor, fontWeight:600,
+                                    overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1, lineHeight:1.3 }}>
+                                    {label}
+                                  </span>
+                                  <button onClick={e=>{e.stopPropagation(); removeSlot(slot.id);}}
+                                    style={{ background:'none', border:'none', cursor:'pointer',
+                                      color:chipColor, fontSize:11, padding:0, lineHeight:1, flexShrink:0, opacity:0.8 }}>
+                                    ×
+                                  </button>
                                 </div>
-                                <div style={{ fontSize:10, color:MUTED, marginTop:2 }}>
-                                  {daySlots.length} post{daySlots.length!==1?'s':''}
-                                </div>
-                              </div>
-                            )}
+                              );
+                            })}
                           </div>
                         );
                       })}
@@ -708,7 +714,8 @@ export default function Dashboard() {
                             ).map((item) => (
                               <div key={`${item.slotId}-${item.platform}`}
                                 onClick={()=>{ setHighlightedSlotId(item.slotId); if (schedule) setTab('review'); }}
-                                style={{ borderRadius:5, marginBottom:3, cursor:'pointer', padding:'4px 7px',
+                                style={{ position:'relative', borderRadius:5, marginBottom:3, cursor:'pointer',
+                                  padding:'4px 20px 4px 7px',
                                   border:`1.5px solid ${item.color}`,
                                   background: item.color + '12' }}>
                                 <div style={{ fontSize:10, fontWeight:700, color:item.color,
@@ -720,6 +727,11 @@ export default function Dashboard() {
                                   {item.label}
                                 </div>
                                 <div style={{ fontSize:10, color:MUTED }}>{formatTime(item.time)}</div>
+                                <button onClick={e=>{e.stopPropagation(); removeSlot(item.slotId);}}
+                                  style={{ position:'absolute', top:3, right:4, background:'none', border:'none',
+                                    cursor:'pointer', color:item.color, fontSize:13, padding:0, lineHeight:1, opacity:0.8 }}>
+                                  ×
+                                </button>
                               </div>
                             ))}
                           </div>
