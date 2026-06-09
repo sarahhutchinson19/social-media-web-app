@@ -577,7 +577,8 @@ export default function Dashboard() {
                   Add many slots at once across a date range — pick the days, time, platforms, and category.
                 </p>
 
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:14 }}>
+                {/* Date / time row */}
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:14 }}>
                   <Field label="Start date">
                     <input type="date" value={recurForm.startDate} onChange={e=>setRecurForm(f=>({...f,startDate:e.target.value}))} style={input} />
                   </Field>
@@ -587,37 +588,39 @@ export default function Dashboard() {
                   <Field label="Time (ET)">
                     <input type="time" value={recurForm.time} onChange={e=>setRecurForm(f=>({...f,time:e.target.value}))} style={input} />
                   </Field>
-                  <Field label="Content categories">
-                    <div style={{ display:'flex', gap:6, marginBottom:6 }}>
-                      <button onClick={()=>setRecurForm(f=>({...f,categories:Object.keys(CATEGORIES)}))}
-                        style={{ ...outlineBtn, fontSize:11, padding:'3px 10px' }}>Select all</button>
-                      <button onClick={()=>setRecurForm(f=>({...f,categories:[]}))}
-                        style={{ ...outlineBtn, fontSize:11, padding:'3px 10px' }}>Clear all</button>
-                    </div>
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                      {Object.keys(CATEGORIES).map(cat => {
-                        const on = recurForm.categories.includes(cat);
-                        return (
-                          <label key={cat} style={{ display:'flex', alignItems:'center', gap:5, cursor:'pointer',
-                            padding:'4px 10px', borderRadius:20, fontSize:12,
-                            border:`1.5px solid ${on?BLUE:BORDER}`,
-                            background:on?BLUE_BG:'#fff', color:on?BLUE:'#374151', fontWeight:on?600:400 }}>
-                            <input type="checkbox" checked={on}
-                              onChange={()=>setRecurForm(f=>({
-                                ...f,
-                                categories: on ? f.categories.filter(c=>c!==cat) : [...f.categories, cat],
-                                articleUrl: '',
-                              }))}
-                              style={{ display:'none' }} />
-                            {cat} <span style={{ fontSize:10, opacity:0.6 }}>({CATEGORIES[cat].length})</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </Field>
                 </div>
 
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+                {/* Categories — full width */}
+                <Field label={`Content categories (${recurForm.categories.length}/${Object.keys(CATEGORIES).length} selected)`}>
+                  <div style={{ display:'flex', gap:6, marginBottom:8, marginTop:4 }}>
+                    <button onClick={()=>setRecurForm(f=>({...f,categories:Object.keys(CATEGORIES)}))}
+                      style={{ ...outlineBtn, fontSize:11, padding:'3px 10px' }}>Select all</button>
+                    <button onClick={()=>setRecurForm(f=>({...f,categories:[]}))}
+                      style={{ ...outlineBtn, fontSize:11, padding:'3px 10px' }}>Clear all</button>
+                  </div>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                    {Object.keys(CATEGORIES).map(cat => {
+                      const on = recurForm.categories.includes(cat);
+                      return (
+                        <label key={cat} style={{ display:'flex', alignItems:'center', gap:5, cursor:'pointer',
+                          padding:'4px 10px', borderRadius:20, fontSize:12,
+                          border:`1.5px solid ${on?BLUE:BORDER}`,
+                          background:on?BLUE_BG:'#fff', color:on?BLUE:'#374151', fontWeight:on?600:400 }}>
+                          <input type="checkbox" checked={on}
+                            onChange={()=>setRecurForm(f=>({
+                              ...f,
+                              categories: on ? f.categories.filter(c=>c!==cat) : [...f.categories, cat],
+                              articleUrl: '',
+                            }))}
+                            style={{ display:'none' }} />
+                          {cat} <span style={{ fontSize:10, opacity:0.6 }}>({CATEGORIES[cat].length})</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </Field>
+
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20, marginTop:14 }}>
                   <Field label="Days of week">
                     <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:4 }}>
                       {DAY_NAMES.map((day,i) => {
