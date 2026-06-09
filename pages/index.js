@@ -459,69 +459,9 @@ export default function Dashboard() {
 
         {/* ══ CONFIGURE TAB ═════════════════════ */}
         {tab==='config' && (
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:22 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:22 }}>
 
-            {/* ── Add a single slot ── */}
-            <Card title="Add Post Slot">
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-                <Field label="Date">
-                  <input type="date" value={slotForm.date} onChange={e=>setSlotForm(f=>({...f,date:e.target.value}))} style={input} />
-                </Field>
-                <Field label="Time (ET)">
-                  <input type="time" value={slotForm.time} onChange={e=>setSlotForm(f=>({...f,time:e.target.value}))} style={input} />
-                </Field>
-              </div>
-
-              <Field label="Platforms">
-                <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:4 }}>
-                  {PLATFORMS_LIST.map(p => {
-                    const on = slotForm.platforms.includes(p);
-                    return (
-                      <label key={p} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer',
-                        padding:'5px 12px', borderRadius:20, fontSize:13,
-                        border:`1.5px solid ${on ? PLATFORM_COLORS[p] : BORDER}`,
-                        background: on ? PLATFORM_COLORS[p]+'18' : '#fff',
-                        color: on ? PLATFORM_COLORS[p] : '#374151', fontWeight: on ? 600 : 400 }}>
-                        <input type="checkbox" checked={on}
-                          onChange={()=>toggleSlotPlatform(setSlotForm, slotForm.platforms, p)}
-                          style={{ display:'none' }} />
-                        <span style={{ width:7, height:7, borderRadius:'50%', background:PLATFORM_COLORS[p], display:'inline-block', flexShrink:0 }} />
-                        {PLATFORM_LABELS[p]}
-                      </label>
-                    );
-                  })}
-                </div>
-              </Field>
-
-              <Field label="Specific article (optional)">
-                <ArticlePicker
-                  value={slotForm.articleUrl}
-                  onChange={(url, article) => setSlotForm(f=>({ ...f, articleUrl: url, category: article?.category || f.category }))}
-                  slotDate={slotForm.date}
-                  articles={allArticles}
-                />
-              </Field>
-
-              <Field label="Content category">
-                <select value={slotForm.category} onChange={e=>setSlotForm(f=>({...f,category:e.target.value,articleUrl:''}))} style={input}>
-                  <option value="">— any category —</option>
-                  {Object.keys(CATEGORIES).map(c=><option key={c} value={c}>{c} ({CATEGORIES[c].length})</option>)}
-                </select>
-              </Field>
-
-              <Field label="Topic / boost note (optional)">
-                <input placeholder="e.g. Tax Season, Spring Turnover…" value={slotForm.topicOverride}
-                  onChange={e=>setSlotForm(f=>({...f,topicOverride:e.target.value}))} style={input} />
-              </Field>
-
-              <button onClick={addSlot} disabled={!slotForm.date || slotForm.platforms.length===0}
-                style={{ ...primaryBtn, marginTop:16, width:'100%',
-                  opacity:(!slotForm.date || slotForm.platforms.length===0) ? 0.5 : 1 }}>
-                + Add Slot
-              </button>
-            </Card>
-
-            {/* ── Slot list ── */}
+            {/* ── Slot list — full width ── */}
             <Card title={`Your Schedule ${customSlots.length > 0 ? `(${customSlots.length} slot${customSlots.length!==1?'s':''})` : ''}`}>
               {/* Date filter */}
               {customSlots.length > 0 && (
@@ -541,7 +481,7 @@ export default function Dashboard() {
               {customSlots.length === 0 ? (
                 <div style={{ textAlign:'center', padding:'48px 0', color:MUTED }}>
                   <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
-                  <p style={{ fontSize:14, margin:0, lineHeight:1.6 }}>No slots yet.<br/>Add individual slots on the left,<br/>or use Quick Add below.</p>
+                  <p style={{ fontSize:14, margin:0, lineHeight:1.6 }}>No slots yet.<br/>Use Quick Add below to build your schedule.</p>
                 </div>
               ) : (() => {
                 const filtered = sortedCustomSlots.filter(s =>
@@ -595,7 +535,7 @@ export default function Dashboard() {
             </Card>
 
             {/* ── Article library status ── */}
-            <div style={{ gridColumn:'1/-1' }}>
+            <div>
               <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 18px',
                 background:'#fff', border:`1px solid ${BORDER}`, borderRadius:10 }}>
                 <div style={{ flex:1 }}>
@@ -619,8 +559,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* ── Quick Add Recurring — full width ── */}
-            <div style={{ gridColumn:'1/-1' }}>
+            {/* ── Quick Add Recurring ── */}
+            <div>
               <Card title="Quick Add Recurring Slots">
                 <p style={{ margin:'0 0 16px', fontSize:13, color:MUTED }}>
                   Add many slots at once across a date range — pick the days, time, platforms, and category.
