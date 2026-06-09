@@ -116,7 +116,8 @@ export default function Dashboard() {
   const [slotFilterFrom, setSlotFilterFrom] = useState('');
   const [slotFilterTo, setSlotFilterTo] = useState('');
   const [openCategory, setOpenCategory] = useState(null);
-  const [scheduleView, setScheduleView] = useState('list');
+  const [scheduleView, setScheduleView] = useState('calendar');
+  const [clearPostsConfirm, setClearPostsConfirm] = useState(false);
   const [calendarMode, setCalendarMode] = useState('month');
   const [calendarFocus, setCalendarFocus] = useState(today);
   const [highlightedSlotId, setHighlightedSlotId] = useState(null);
@@ -148,10 +149,12 @@ export default function Dashboard() {
       if (ak)       setAnthropicKey(ak);
       if (bitk)     setBitlyKey(bitk);
       if (blk)      setBlotatoKey(blk);
-      if (slots)    { try { setCustomSlots(JSON.parse(slots));       } catch {} }
-      if (sched)    { try { setSchedule(JSON.parse(sched));           } catch {} }
-      if (postsStr) { try { setPosts(JSON.parse(postsStr));           } catch {} }
-      if (statStr)  { try { setScheduleStatus(JSON.parse(statStr));   } catch {} }
+      const acctMap = localStorage.getItem('innago-account-mapping');
+      if (slots)    { try { setCustomSlots(JSON.parse(slots));         } catch {} }
+      if (sched)    { try { setSchedule(JSON.parse(sched));             } catch {} }
+      if (postsStr) { try { setPosts(JSON.parse(postsStr));             } catch {} }
+      if (statStr)  { try { setScheduleStatus(JSON.parse(statStr));     } catch {} }
+      if (acctMap)  { try { setAccountMapping(JSON.parse(acctMap));     } catch {} }
     } catch {}
   }, []);
 
@@ -507,6 +510,10 @@ export default function Dashboard() {
     } catch {}
   }, [schedule, posts, scheduleStatus]);
 
+  useEffect(() => {
+    try { localStorage.setItem('innago-account-mapping', JSON.stringify(accountMapping)); } catch {}
+  }, [accountMapping]);
+
   // ── Calendar label — uses article category from generated schedule if available ──
   const calendarLabel = (slot) => {
     const schedSlot = schedule?.find(s => s.id === slot.id);
@@ -533,7 +540,7 @@ export default function Dashboard() {
             ['review', `Review${schedule ? ` (${doneCount}/${totalSlots})` : ''}`],
             ['blotato', 'Settings'],
           ].map(([t, label]) => (
-            <TabBtn key={t} active={tab===t} onClick={() => setTab(t)}>{label}</TabBtn>
+            <TabBtn key={t} active={tab===t} onClick={() => { setTab(t); setClearPostsConfirm(false); }}>{label}</TabBtn>
           ))}
         </nav>
 
@@ -544,6 +551,21 @@ export default function Dashboard() {
               {blotatoReady && !autoSchedule && (
                 <button onClick={scheduleAll} style={{ ...outlineBtn, color:BLUE, borderColor:BLUE }}>
                   Schedule All to Blotato
+                </button>
+              )}
+              {!clearPostsConfirm ? (
+                <button onClick={()=>setClearPostsConfirm(true)}
+                  style={{ ...outlineBtn, color:RED, borderColor:RED }}>
+                  Clear Posts
+                </button>
+              ) : (
+                <button onClick={()=>{
+                  setSchedule(null); setPosts({}); setScheduleStatus({});
+                  setClearPostsConfirm(false);
+                  try { localStorage.removeItem('innago-schedule'); localStorage.removeItem('innago-posts'); localStorage.removeItem('innago-schedule-status'); } catch {}
+                }}
+                  style={{ ...primaryBtn, background:RED }}>
+                  Are you sure? Click to confirm
                 </button>
               )}
             </>
