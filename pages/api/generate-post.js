@@ -140,13 +140,26 @@ async function fetchArticleMeta(url) {
       html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i) ||
       html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i) ||
       html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const title = titleMatch ? titleMatch[1].replace(' - Innago', '').trim() : null;
+    const decodeEntities = (str) => str
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/&apos;/gi, "'")
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+      .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+
+    const title = titleMatch
+      ? decodeEntities(titleMatch[1].replace(/ [-|] Innago$/i, '').trim())
+      : null;
 
     const descMatch =
       html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i) ||
       html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']description["']/i) ||
       html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
-    const summary = descMatch ? descMatch[1].trim() : '';
+    const summary = descMatch ? decodeEntities(descMatch[1].trim()) : '';
 
     return { title, summary, image_url: extractHeroImage(html, url) };
   } catch {
