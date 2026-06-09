@@ -117,31 +117,25 @@ export default function Dashboard() {
   const [generatedImages, setGeneratedImages] = useState({});  // slotId → { html, loading }
 
   // ── Anthropic API key (entered in UI) ────────
-  const [anthropicKey, setAnthropicKey] = useState(() => {
-    try { return localStorage.getItem('innago-anthropic-key') || ''; } catch { return ''; }
-  });
-  const saveAnthropicKey = (key) => {
-    setAnthropicKey(key);
-    try { localStorage.setItem('innago-anthropic-key', key); } catch {}
-  };
+  // API keys — initialized empty, loaded from localStorage after mount (Next.js SSR safe)
+  const [anthropicKey, setAnthropicKey] = useState('');
+  const [bitlyKey, setBitlyKey] = useState('');
+  const [blotatoKey, setBlotatoKey] = useState('');
 
-  // ── Bitly API key ────────────────────────────
-  const [bitlyKey, setBitlyKey] = useState(() => {
-    try { return localStorage.getItem('innago-bitly-key') || ''; } catch { return ''; }
-  });
-  const saveBitlyKey = (key) => {
-    setBitlyKey(key);
-    try { localStorage.setItem('innago-bitly-key', key); } catch {}
-  };
+  useEffect(() => {
+    try {
+      const ak   = localStorage.getItem('innago-anthropic-key');
+      const bitk = localStorage.getItem('innago-bitly-key');
+      const blk  = localStorage.getItem('innago-blotato-key');
+      if (ak)   setAnthropicKey(ak);
+      if (bitk) setBitlyKey(bitk);
+      if (blk)  setBlotatoKey(blk);
+    } catch {}
+  }, []);
 
-  // ── Blotato config ──────────────────────────
-  const [blotatoKey, setBlotatoKey] = useState(() => {
-    try { return localStorage.getItem('innago-blotato-key') || ''; } catch { return ''; }
-  });
-  const saveBlotatoKey = (key) => {
-    setBlotatoKey(key);
-    try { localStorage.setItem('innago-blotato-key', key); } catch {}
-  };
+  const saveAnthropicKey = (key) => { setAnthropicKey(key); try { localStorage.setItem('innago-anthropic-key', key); } catch {} };
+  const saveBitlyKey     = (key) => { setBitlyKey(key);     try { localStorage.setItem('innago-bitly-key', key);     } catch {} };
+  const saveBlotatoKey   = (key) => { setBlotatoKey(key);   try { localStorage.setItem('innago-blotato-key', key);   } catch {} };
   const [accounts, setAccounts] = useState(null);
   const [accountsLoading, setAccountsLoading] = useState(false);
   const [accountsError, setAccountsError] = useState('');
@@ -706,37 +700,29 @@ export default function Dashboard() {
                               marginBottom:6, textAlign:'center' }}>
                               {d.toLocaleString('default',{month:'short'})} {d.getDate()}
                             </div>
-                            {daySlots.map(slot=>{
-                              // Pick a dominant color from the first platform
-                              const baseColor = slot.platforms?.[0] ? PLATFORM_COLORS[slot.platforms[0]] : BLUE;
-                              const label = slot.topicOverride || slot.category || 'Post';
-                              return (
-                                <div key={slot.id}
-                                  onClick={()=>{ setHighlightedSlotId(slot.id); if (schedule) setTab('review'); }}
-                                  style={{ borderRadius:5, marginBottom:4, cursor:'pointer', overflow:'hidden',
-                                    border:`1px solid ${baseColor}33`,
-                                    background: baseColor + '18' }}>
-                                  {/* Colored top stripe */}
-                                  <div style={{ height:3, background:baseColor, borderRadius:'5px 5px 0 0' }} />
-                                  <div style={{ padding:'3px 6px 4px' }}>
-                                    {/* Platform dots */}
-                                    <div style={{ display:'flex', gap:2, marginBottom:2 }}>
-                                      {(slot.platforms||[]).map(p=>(
-                                        <span key={p} title={PLATFORM_LABELS[p]}
-                                          style={{ width:5, height:5, borderRadius:'50%', background:PLATFORM_COLORS[p], display:'inline-block' }} />
-                                      ))}
-                                    </div>
-                                    {/* Topic label */}
-                                    <div style={{ fontSize:11, fontWeight:600, color:baseColor,
-                                      overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', lineHeight:1.3 }}>
-                                      {label}
-                                    </div>
-                                    {/* Time */}
-                                    <div style={{ fontSize:10, color:MUTED, marginTop:1 }}>{formatTime(slot.time)}</div>
-                                  </div>
+                            {daySlots.flatMap(slot =>
+                              (slot.platforms || [PLATFORMS_LIST[0]]).map(platform => ({
+                                slotId: slot.id, platform, time: slot.time,
+                                label: slot.topicOverride || slot.category || 'Post',
+                                color: PLATFORM_COLORS[platform],
+                              }))
+                            ).map((item, idx) => (
+                              <div key={`${item.slotId}-${item.platform}`}
+                                onClick={()=>{ setHighlightedSlotId(item.slotId); if (schedule) setTab('review'); }}
+                                style={{ borderRadius:5, marginBottom:3, cursor:'pointer', padding:'4px 7px',
+                                  border:`1.5px solid ${item.color}`,
+                                  background: item.color + '12' }}>
+                                <div style={{ fontSize:10, fontWeight:700, color:item.color,
+                                  textTransform:'uppercase', letterSpacing:'0.04em', lineHeight:1.2, marginBottom:1 }}>
+                                  {PLATFORM_LABELS[item.platform]}
                                 </div>
-                              );
-                            })}
+                                <div style={{ fontSize:11, fontWeight:600, color:'#1a2340',
+                                  overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', lineHeight:1.3 }}>
+                                  {item.label}
+                                </div>
+                                <div style={{ fontSize:10, color:MUTED }}>{formatTime(item.time)}</div>
+                              </div>
+                            ))}
                           </div>
                         );
                       })}
