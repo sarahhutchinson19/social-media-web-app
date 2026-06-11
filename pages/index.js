@@ -170,7 +170,7 @@ export default function Dashboard() {
     facebook:  { accountId: '', pageId: '' },
     linkedin:  { accountId: '', pageId: '' },
   });
-  const [autoSchedule, setAutoSchedule] = useState(true);
+  const [autoSchedule, setAutoSchedule] = useState(false);
 
   // ── Generation + review state ────────────────
   const [schedule, setSchedule] = useState(null);
@@ -414,7 +414,12 @@ export default function Dashboard() {
   // ── Unschedule a single platform post from Blotato ──
   const unschedulePost = async (slotId, platform) => {
     const platformStatus = scheduleStatus[slotId]?.[platform];
-    if (!platformStatus?.postId) return;
+    if (!platformStatus) return;
+    // If no postId, just mark as deleted locally (can't call API without an ID)
+    if (!platformStatus.postId) {
+      setScheduleStatus(p => ({ ...p, [slotId]: { ...p[slotId], [platform]: { ok: false, deleted: true } } }));
+      return;
+    }
     setScheduleStatus(p => ({ ...p, [slotId]: { ...p[slotId], [platform]: { ...platformStatus, _deleting: true } } }));
     try {
       const res = await fetch('/api/blotato/delete-post', {
@@ -1228,7 +1233,7 @@ export default function Dashboard() {
                           </span>
                           {item.result.deleted ? (
                             <span style={{ fontSize:11, color:MUTED }}>Removed from Blotato</span>
-                          ) : item.result.ok && item.result.postId ? (
+                          ) : item.result.ok ? (
                             <button onClick={()=>unschedulePost(item.slotId, item.platform)}
                               style={{ ...outlineBtn, fontSize:11, padding:'3px 10px', color:RED, borderColor:RED }}>
                               Unschedule
@@ -1388,7 +1393,7 @@ export default function Dashboard() {
                               <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
                                 {Object.entries(slotStatus).map(([plat,r])=>(
                                   <StatusChip key={plat} platform={plat} result={r}
-                                    onUnschedule={r?.ok && r?.postId ? ()=>unschedulePost(slot.id, plat) : null} />
+                                    onUnschedule={r?.ok ? ()=>unschedulePost(slot.id, plat) : null} />
                                 ))}
                               </div>
                             )}
