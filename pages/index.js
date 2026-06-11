@@ -411,6 +411,28 @@ export default function Dashboard() {
     }
   };
 
+  // ── Unschedule a single platform post from Blotato ──
+  const unschedulePost = async (slotId, platform) => {
+    const platformStatus = scheduleStatus[slotId]?.[platform];
+    if (!platformStatus?.postId) return;
+    setScheduleStatus(p => ({ ...p, [slotId]: { ...p[slotId], [platform]: { ...platformStatus, _deleting: true } } }));
+    try {
+      const res = await fetch('/api/blotato/delete-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: platformStatus.postId, blotatoApiKey: blotatoKey || undefined }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setScheduleStatus(p => ({ ...p, [slotId]: { ...p[slotId], [platform]: { ok: false, deleted: true } } }));
+      } else {
+        setScheduleStatus(p => ({ ...p, [slotId]: { ...p[slotId], [platform]: { ...platformStatus, _deleting: false, error: data.error } } }));
+      }
+    } catch (e) {
+      setScheduleStatus(p => ({ ...p, [slotId]: { ...p[slotId], [platform]: { ...platformStatus, _deleting: false } } }));
+    }
+  };
+
   // ── Edit ─────────────────────────────────────
   const startEdit = (slotId, field) => { setEditingKey(`${slotId}::${field}`); setEditDraft(posts[slotId]?.[field] || ''); };
   const saveEdit = (slotId, field) => { setPosts(p => ({ ...p, [slotId]: { ...p[slotId], [field]: editDraft } })); setEditingKey(null); };
@@ -1161,6 +1183,64 @@ export default function Dashboard() {
                 </>
               )}
             </Card>
+
+            {/* ── Blotato Scheduled Posts ── */}
+            {(() => {
+              const scheduled = (schedule || []).flatMap(slot => {
+                const stat = scheduleStatus[slot.id];
+                if (!stat) return [];
+                return Object.entries(stat)
+                  .filter(([,r]) => r && (r.ok || r.deleted) && !r._loading)
+                  .map(([plat, r]) => ({
+                    slotId: slot.id,
+                    platform: plat,
+                    result: r,
+                    date: slot.date,
+                    time: slot.time,
+                    day: slot.day,
+                    topic: slot.article?.category || slot.boostedTopic || slotLabel(slot),
+                  }));
+              });
+              if (!scheduled.length) return null;
+              return (
+                <div style={{ gridColumn:'1/-1', marginTop:8 }}>
+                  <Card title={`Blotato Queue (${scheduled.filter(s=>s.result.ok).length} scheduled)`}>
+                    <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                      {scheduled.map((item, i) => (
+                        <div key={`${item.slotId}-${item.platform}-${i}`}
+                          style={{ display:'flex', alignItems:'center', gap:10, padding:'7px 10px',
+                            borderRadius:8, background: item.result.deleted ? '#f9fafb' : BG,
+                            opacity: item.result.deleted ? 0.5 : 1 }}>
+                          <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:12,
+                            fontWeight:600, color: item.result.deleted ? MUTED : PLATFORM_COLORS[item.platform],
+                            minWidth:90 }}>
+                            <span style={{ width:7, height:7, borderRadius:'50%',
+                              background: item.result.deleted ? MUTED : PLATFORM_COLORS[item.platform],
+                              display:'inline-block' }} />
+                            {PLATFORM_LABELS[item.platform]}
+                          </span>
+                          <span style={{ fontSize:13, color: item.result.deleted ? MUTED : TEXT,
+                            flex:1, textDecoration: item.result.deleted ? 'line-through' : 'none' }}>
+                            {item.topic}
+                          </span>
+                          <span style={{ fontSize:12, color:MUTED, minWidth:130 }}>
+                            {item.day} {item.date} · {formatTime(item.time)}
+                          </span>
+                          {item.result.deleted ? (
+                            <span style={{ fontSize:11, color:MUTED }}>Removed from Blotato</span>
+                          ) : item.result.ok && item.result.postId ? (
+                            <button onClick={()=>unschedulePost(item.slotId, item.platform)}
+                              style={{ ...outlineBtn, fontSize:11, padding:'3px 10px', color:RED, borderColor:RED }}>
+                              Unschedule
+                            </button>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1305,9 +1385,10 @@ export default function Dashboard() {
 
                           <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', justifyContent:'flex-end' }}>
                             {slotStatus && !slotStatus._loading && (
-                              <div style={{ display:'flex', gap:4 }}>
+                              <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
                                 {Object.entries(slotStatus).map(([plat,r])=>(
-                                  <StatusChip key={plat} platform={plat} result={r} />
+                                  <StatusChip key={plat} platform={plat} result={r}
+                                    onUnschedule={r?.ok && r?.postId ? ()=>unschedulePost(slot.id, plat) : null} />
                                 ))}
                               </div>
                             )}
@@ -1335,13 +1416,13 @@ export default function Dashboard() {
                                   style={{ ...outlineBtn, fontSize:12, padding:'5px 10px', opacity:generating?0.5:1 }}>
                                   Regenerate
                                 </button>
-                                {!autoSchedule && blotatoReady && !slotStatus && (
+                                {blotatoReady && !slotStatus?._loading && (
                                   <button onClick={async()=>{
                                     setScheduleStatus(prev=>({...prev,[slot.id]:{_loading:true}}));
                                     const r=await scheduleSlot(slot.id,p);
                                     setScheduleStatus(prev=>({...prev,[slot.id]:r}));
                                   }} style={{ ...outlineBtn, fontSize:12, padding:'5px 10px', color:BLUE, borderColor:BLUE }}>
-                                    Schedule
+                                    {slotStatus ? 'Reschedule' : 'Schedule to Blotato'}
                                   </button>
                                 )}
                                 <button onClick={()=>isEditing?saveEdit(slot.id,field):startEdit(slot.id,field)}
@@ -1583,16 +1664,39 @@ function PlatformDot({ color }) {
   return <div style={{ width:10, height:10, borderRadius:'50%', background:color, flexShrink:0 }} />;
 }
 
-function StatusChip({ platform, result }) {
+function StatusChip({ platform, result, onUnschedule }) {
   if (!result) return null;
+  if (result.deleted) {
+    return (
+      <span style={{ fontSize:11, padding:'2px 7px', borderRadius:10, border:'1px solid #e5e7eb',
+        background:'#f9fafb', color:'#9ca3af', fontWeight:600, textDecoration:'line-through' }}>
+        {PLATFORM_LABELS[platform] || platform}
+      </span>
+    );
+  }
+  if (result._deleting) {
+    return (
+      <span style={{ fontSize:11, padding:'2px 7px', borderRadius:10, border:'1px solid #fecaca',
+        background:'#fef2f2', color:RED, fontWeight:600 }}>
+        Removing…
+      </span>
+    );
+  }
   const ok = result.ok;
   const color = ok ? PLATFORM_COLORS[platform] : RED;
   const bg = ok ? '#f0fdf4' : '#fef2f2';
   const border = ok ? '#bbf7d0' : '#fecaca';
   return (
-    <span style={{ fontSize:11, padding:'2px 7px', borderRadius:10, border:`1px solid ${border}`,
-      background:bg, color, fontWeight:600 }}>
+    <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, padding:'2px 7px',
+      borderRadius:10, border:`1px solid ${border}`, background:bg, color, fontWeight:600 }}>
       {ok ? '✓' : '✗'} {PLATFORM_LABELS[platform] || platform}
+      {ok && onUnschedule && (
+        <button onClick={onUnschedule} title="Remove from Blotato"
+          style={{ background:'none', border:'none', cursor:'pointer', color, fontSize:12,
+            padding:0, lineHeight:1, marginLeft:1, opacity:0.7 }}>
+          ×
+        </button>
+      )}
     </span>
   );
 }

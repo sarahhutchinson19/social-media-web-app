@@ -9,7 +9,10 @@
       "Read(//Users/sarahhutchinson/**)",
       "Bash(mdfind -name npm)",
       "mcp__Claude_in_Chrome__tabs_context_mcp",
-      "Bash(node -e \"require\\('./pages/index.js'\\)\")"
+      "Bash(node -e \"require\\('./pages/index.js'\\)\")",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
