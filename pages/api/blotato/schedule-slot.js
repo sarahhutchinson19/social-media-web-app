@@ -92,7 +92,9 @@ export default async function handler(req, res) {
         mediaUrls,
       });
 
-      results[platform] = await publishPost(apiKey, payload);
+      const result = await publishPost(apiKey, payload);
+      // Store scheduledTime and accountId so we can find+delete the post later
+      results[platform] = { ...result, scheduledTime, accountId };
     })
   );
 

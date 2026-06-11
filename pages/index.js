@@ -415,23 +415,25 @@ export default function Dashboard() {
   const unschedulePost = async (slotId, platform) => {
     const platformStatus = scheduleStatus[slotId]?.[platform];
     if (!platformStatus) return;
-    // If no postId, just mark as deleted locally (can't call API without an ID)
-    if (!platformStatus.postId) {
-      setScheduleStatus(p => ({ ...p, [slotId]: { ...p[slotId], [platform]: { ok: false, deleted: true } } }));
-      return;
-    }
     setScheduleStatus(p => ({ ...p, [slotId]: { ...p[slotId], [platform]: { ...platformStatus, _deleting: true } } }));
     try {
       const res = await fetch('/api/blotato/delete-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId: platformStatus.postId, blotatoApiKey: blotatoKey || undefined }),
+        body: JSON.stringify({
+          postId: platformStatus.postId || undefined,
+          scheduledTime: platformStatus.scheduledTime || undefined,
+          accountId: platformStatus.accountId || undefined,
+          platform,
+          blotatoApiKey: blotatoKey || undefined,
+        }),
       });
       const data = await res.json();
       if (data.ok) {
         setScheduleStatus(p => ({ ...p, [slotId]: { ...p[slotId], [platform]: { ok: false, deleted: true } } }));
       } else {
-        setScheduleStatus(p => ({ ...p, [slotId]: { ...p[slotId], [platform]: { ...platformStatus, _deleting: false, error: data.error } } }));
+        alert(`Could not remove from Blotato: ${data.error}\n\nPlease remove it manually at my.blotato.com`);
+        setScheduleStatus(p => ({ ...p, [slotId]: { ...p[slotId], [platform]: { ...platformStatus, _deleting: false } } }));
       }
     } catch (e) {
       setScheduleStatus(p => ({ ...p, [slotId]: { ...p[slotId], [platform]: { ...platformStatus, _deleting: false } } }));
