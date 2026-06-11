@@ -1236,10 +1236,10 @@ export default function Dashboard() {
                           {item.result.deleted ? (
                             <span style={{ fontSize:11, color:MUTED }}>Removed from Blotato</span>
                           ) : item.result.ok ? (
-                            <button onClick={()=>unschedulePost(item.slotId, item.platform)}
-                              style={{ ...outlineBtn, fontSize:11, padding:'3px 10px', color:RED, borderColor:RED }}>
-                              Unschedule
-                            </button>
+                            <a href="https://app.blotato.com" target="_blank" rel="noreferrer"
+                              style={{ ...outlineBtn, fontSize:11, padding:'3px 10px', color:BLUE, borderColor:BLUE, textDecoration:'none' }}>
+                              Delete on Blotato ↗
+                            </a>
                           ) : null}
                         </div>
                       ))}
@@ -1697,12 +1697,12 @@ function StatusChip({ platform, result, onUnschedule }) {
     <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, padding:'2px 7px',
       borderRadius:10, border:`1px solid ${border}`, background:bg, color, fontWeight:600 }}>
       {ok ? '✓' : '✗'} {PLATFORM_LABELS[platform] || platform}
-      {ok && onUnschedule && (
-        <button onClick={onUnschedule} title="Remove from Blotato"
-          style={{ background:'none', border:'none', cursor:'pointer', color, fontSize:12,
-            padding:0, lineHeight:1, marginLeft:1, opacity:0.7 }}>
-          ×
-        </button>
+      {ok && (
+        <a href="https://app.blotato.com" target="_blank" rel="noreferrer"
+          title="Delete from Blotato manually"
+          style={{ color, fontSize:10, marginLeft:2, opacity:0.7, textDecoration:'none' }}>
+          ↗
+        </a>
       )}
     </span>
   );
